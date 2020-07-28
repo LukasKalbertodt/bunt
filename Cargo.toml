@@ -1,0 +1,16 @@
+[package]
+name = "bunt"
+version = "0.1.0"
+authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"
+proc-macro2 = "1"
+syn = { version = "1", default-features = false, features = ["parsing"] }
+
+[dev-dependencies]
+termcolor = "1"
