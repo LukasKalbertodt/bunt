@@ -171,7 +171,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                 use std::io::Write as _;
 
                 #arg_bindings
-                let #buf = &mut { #target };
+                let #buf = &mut #target;
                 #writes
 
                 Ok(())
