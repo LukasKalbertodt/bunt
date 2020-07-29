@@ -8,7 +8,10 @@ use syn::{
     parse::{Parse, ParseStream},
     spanned::Spanned,
 };
-use std::collections::HashMap;
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt::Write,
+};
 
 
 /// Helper macro to easily create an error with a span.
@@ -33,6 +36,37 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
         let input: WriteInput = syn::parse2(input)?;
 
+        // Helper functions to create idents for argument bindings
+        fn pos_arg_ident(id: u32) -> Ident {
+            Ident::new(&format!("arg_pos_{}", id), Span::mixed_site())
+        }
+        fn name_arg_ident(id: &str) -> Ident {
+            Ident::new(&format!("arg_name_{}", id), Span::mixed_site())
+        }
+
+        // Create a binding for each given argument. This is useful for two
+        // reasons:
+        // - The given expression could have side effects or be compuationally
+        //   expensive. The formatting macros from std guarantee that the
+        //   expression is evaluated only once, so we want to guarantee the
+        //   same.
+        // - We can then very easily refer to all arguments later. Without these
+        //   bindings, we have to do lots of tricky logic to get the right
+        //   arguments in each invidiual `write` call.
+        let mut arg_bindings = TokenStream::new();
+        for (i, arg) in input.args.positional.iter().enumerate() {
+            let ident = pos_arg_ident(i as u32);
+            arg_bindings.extend(quote! {
+                let #ident = &{ #arg };
+            })
+        }
+        for (name, arg) in input.args.named.iter() {
+            let ident = name_arg_ident(name);
+            arg_bindings.extend(quote! {
+                let #ident = &{ #arg };
+            })
+        }
+
         // Prepare the actual process of writing to the target according to the
         // format string.
         let buf = Ident::new("buf", Span::mixed_site());
@@ -42,53 +76,65 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
 
         for segment in input.format_str.fragments {
             match segment {
-                FormatStrFragment::Fmt { fmt_str, args } => {
-                    let mut arg_tokens = TokenStream::new();
+                // A formatting fragment. This is the more tricky one. We have
+                // to construct a `std::write!` invocation that has the right
+                // fmt string, the right arguments (and no additional ones!) and
+                // the correct argument references.
+                FormatStrFragment::Fmt { fmt_str_parts, args } => {
+                    let mut fmt_str = fmt_str_parts[0].clone();
+                    let mut used_args = BTreeSet::new();
 
-                    // Add positional arguments
-                    for arg in &args {
-                        let arg_expr = match arg.kind {
+                    for (i, arg) in args.into_iter().enumerate() {
+                        let ident = match arg.kind {
                             ArgRefKind::Next => {
-                                let e = input.args.positional.get(next_arg_index).ok_or_else(|| {
-                                    err!("invalid '{{}}' argument reference \
-                                        (too few actual arguments)")
-                                })?;
+                                let ident = pos_arg_ident(next_arg_index as u32);
+                                if input.args.positional.get(next_arg_index).is_none() {
+                                    return Err(
+                                        err!("invalid '{{}}' argument reference \
+                                            (too few actual arguments)")
+                                    );
+                                }
+
                                 next_arg_index += 1;
-                                e
-                            },
+                                ident
+                            }
                             ArgRefKind::Position(pos) => {
-                                input.args.positional.get(pos as usize).ok_or_else(|| {
-                                    err!(
+                                let ident = pos_arg_ident(pos);
+                                if input.args.positional.get(pos as usize).is_none() {
+                                    return Err(err!(
                                         "invalid reference to positional argument {} (there are \
                                             not that many arguments)",
                                         pos,
-                                    )
-                                })?
-                            }
+                                    ));
+                                }
 
-                            // Skip named args
-                            _ => continue,
+                                ident
+                            }
+                            ArgRefKind::Name(name) => {
+                                let ident = name_arg_ident(&name);
+                                if input.args.named.get(&name).is_none() {
+                                    return Err(err!("there is no argument named `{}`", name));
+                                }
+
+                                ident
+                            }
                         };
 
-                        arg_tokens.extend(quote! { #arg_expr, });
+                        std::write!(fmt_str, "{{{}:{}}}", ident, arg.format_spec).unwrap();
+                        used_args.insert(ident);
+                        fmt_str.push_str(&fmt_str_parts[i + 1]);
                     }
 
-                    // Add named arguments
-                    for arg in &args {
-                        if let ArgRefKind::Name(name) = &arg.kind {
-                            let arg_expr = input.args.named.get(name)
-                                .ok_or(err!("there is no argument named `{}`", name))?;
-                            let name = Ident::new(name, Span::call_site());
-                            arg_tokens.extend(quote! { #name = #arg_expr, });
-                        }
-                    }
 
                     // Combine everything in `write!` invocation.
                     writes.extend(quote! {
-                        std::write!(#buf, #fmt_str, #arg_tokens)?;
+                        std::write!(#buf, #fmt_str #(, #used_args = #used_args)* )?;
                     });
                 }
 
+                // A style start tag: we simply create the `ColorSpec` and call
+                // `set_color`. The interesting part is how the styles stack and
+                // merge.
                 FormatStrFragment::StyleStart(style) => {
                     let last_style = style_stack.last().copied().unwrap_or(Style::default());
                     let new_style = style.or(last_style);
@@ -99,6 +145,9 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                     });
                 }
 
+                // Revert the last style tag. This means that we pop the topmost
+                // style from the stack and apply the *then* topmost style
+                // again.
                 FormatStrFragment::StyleEnd => {
                     style_stack.pop().ok_or(err!("unmatched closing style tag"))?;
                     let style = style_stack.last().copied().unwrap_or(Style::default());
@@ -121,6 +170,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
             (|| -> Result<(), ::std::io::Error> {
                 use std::io::Write as _;
 
+                #arg_bindings
                 let #buf = &mut { #target };
                 #writes
 
@@ -153,9 +203,11 @@ impl Parse for WriteInput {
 #[derive(Debug)]
 enum FormatStrFragment {
     /// A format string without style tags, but potentially with arguments.
+    ///
+    /// `fmt_str_parts` always has exactly one element more than `args`.
     Fmt {
-        /// The format string. TODO: maybe this is useless
-        fmt_str: String,
+        /// The format string as parts between the arguments.
+        fmt_str_parts: Vec<String>,
 
         /// Information about argument that are referenced.
         args: Vec<ArgRef>,
@@ -171,7 +223,7 @@ enum FormatStrFragment {
 #[derive(Debug)]
 struct ArgRef {
     kind: ArgRefKind,
-    format_spec: Option<String>,
+    format_spec: String,
 }
 
 /// How a format argument is referred to.
@@ -204,13 +256,7 @@ impl ArgRef {
             ArgRefKind::Name(arg_str.into())
         };
 
-        let format_spec = if format_spec.is_empty() {
-            None
-        } else {
-            Some(format_spec.into())
-        };
-
-        Ok(Self { kind, format_spec })
+        Ok(Self { kind, format_spec: format_spec.into() })
     }
 }
 
@@ -243,43 +289,52 @@ impl Parse for FormatStr {
         let mut fragments = Vec::new();
         let mut s = &raw[..];
         while !s.is_empty() {
-            let start_string = s;
+            fn string_without<'a>(a: &'a str, b: &'a str) -> &'a str {
+                let end = b.as_ptr() as usize - a.as_ptr() as usize;
+                &a[..end]
+            }
+
+            // let start_string = s;
             let mut args = Vec::new();
+            let mut fmt_str_parts = Vec::new();
 
             // Scan until we reach a style tag.
+            let mut scanner = s;
             loop {
                 match () {
                     // Reached EOF: stop searching!
-                    () if s.is_empty() => break,
+                    () if scanner.is_empty() => break,
 
                     // Escaped brace: skip.
-                    () if s.starts_with("{{") => s = &s[2..],
+                    () if scanner.starts_with("{{") => scanner = &scanner[2..],
 
                     // Found a style tag: stop searching!
-                    () if s.starts_with("{$") => break,
+                    () if scanner.starts_with("{$") => break,
 
                     // Found a styled argument: stop searching!
-                    () if s.starts_with("{[") => break,
+                    () if scanner.starts_with("{[") => break,
 
                     // An formatting argument. Gather some information about it
                     // and remember it for later.
-                    () if s.starts_with("{") => {
-                        let (inner, rest) = split_at_closing_brace(&s[1..], lit.span())?;
+                    () if scanner.starts_with("{") => {
+                        let (inner, rest) = split_at_closing_brace(&scanner[1..], lit.span())?;
                         args.push(ArgRef::parse(inner)?);
+                        fmt_str_parts.push(string_without(s, scanner).to_owned());
                         s = rest;
+                        scanner = rest;
                     }
 
                     // Some other character: just continue searching.
-                    _ => s = &s[1..],
+                    _ => scanner = &scanner[1..],
                 }
             }
 
-            // Push fragment unless the style tag was at the very start (i.e.
-            // our format fragment is empty).
-            let end_fmt_str = s.as_ptr() as usize - start_string.as_ptr() as usize;
-            let fmt_str = &start_string[..end_fmt_str];
-            if !fmt_str.is_empty() {
-                fragments.push(FormatStrFragment::Fmt { args, fmt_str: fmt_str.into() });
+            // Add the last string part and then push this fragment, unless it
+            // is completely empty.
+            fmt_str_parts.push(string_without(s, scanner).to_owned());
+            s = scanner;
+            if !args.is_empty() || fmt_str_parts.iter().any(|s| !s.is_empty()) {
+                fragments.push(FormatStrFragment::Fmt { args, fmt_str_parts });
             }
 
             if s.is_empty() {
@@ -317,7 +372,7 @@ impl Parse for FormatStr {
                     let arg = ArgRef::parse(standard_inner)?;
                     fragments.push(FormatStrFragment::Fmt {
                         args: vec![arg],
-                        fmt_str: format!("{{{}}}", standard_inner)
+                        fmt_str_parts: vec!["".into(), "".into()],
                     });
 
                     fragments.push(FormatStrFragment::StyleEnd);
