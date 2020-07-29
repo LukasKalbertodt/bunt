@@ -216,7 +216,7 @@ enum FormatStrFragment {
     /// A `{$...}` style start tag.
     StyleStart(Style),
 
-    /// A `{$/}` style end tag.
+    /// A `{/$}` style end tag.
     StyleEnd,
 }
 
@@ -310,6 +310,7 @@ impl Parse for FormatStr {
 
                     // Found a style tag: stop searching!
                     () if scanner.starts_with("{$") => break,
+                    () if scanner.starts_with("{/$") => break,
 
                     // Found a styled argument: stop searching!
                     () if scanner.starts_with("{[") => break,
@@ -345,7 +346,7 @@ impl Parse for FormatStr {
             // style tag.
             match () {
                 // Closing style tag.
-                () if s.starts_with("{$/}") => {
+                () if s.starts_with("{/$}") => {
                     fragments.push(FormatStrFragment::StyleEnd);
                     s = &s[4..];
                 }
