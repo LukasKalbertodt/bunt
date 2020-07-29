@@ -313,10 +313,11 @@ impl Parse for FormatStr {
                     fragments.push(FormatStrFragment::StyleStart(style));
 
                     // Parse the standard part of this arg reference.
-                    let arg = ArgRef::parse(&inner[style_end + 1..])?;
+                    let standard_inner = inner[style_end + 1..].trim_start();
+                    let arg = ArgRef::parse(standard_inner)?;
                     fragments.push(FormatStrFragment::Fmt {
                         args: vec![arg],
-                        fmt_str: format!("{{{}}}", &inner[style_end + 1..])
+                        fmt_str: format!("{{{}}}", standard_inner)
                     });
 
                     fragments.push(FormatStrFragment::StyleEnd);
