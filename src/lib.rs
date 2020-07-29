@@ -33,9 +33,44 @@ pub fn spec(input: TokenStream1) -> TokenStream1 {
 
 #[proc_macro]
 pub fn write(input: TokenStream1) -> TokenStream1 {
-    run(input, |input| {
-        let input: WriteInput = syn::parse2(input)?;
+    run(input, |input| syn::parse2::<WriteInput>(input)?.gen_output())
+}
 
+#[proc_macro]
+pub fn writeln(input: TokenStream1) -> TokenStream1 {
+    run(input, |input| {
+        let mut input = syn::parse2::<WriteInput>(input)?;
+
+        // Add `\n` to the end of the formatting string. Since it is already
+        // parsed, this is a bit more involved.
+        match input.format_str.fragments.last_mut() {
+            Some(FormatStrFragment::Fmt { fmt_str_parts, .. }) => {
+                fmt_str_parts.last_mut()
+                    .expect("bug: fmt_str_parts empty")
+                    .push('\n');
+            }
+            _ => {
+                input.format_str.fragments.push(FormatStrFragment::Fmt {
+                    fmt_str_parts: vec!["\n".into()],
+                    args: vec![],
+                });
+            }
+        }
+
+        input.gen_output()
+    })
+}
+
+/// Input for the `write!` macro.
+#[derive(Debug)]
+struct WriteInput {
+    target: syn::Expr,
+    format_str: FormatStr,
+    args: FormatArgs,
+}
+
+impl WriteInput {
+    fn gen_output(&self) -> Result<TokenStream, Error> {
         // Helper functions to create idents for argument bindings
         fn pos_arg_ident(id: u32) -> Ident {
             Ident::new(&format!("arg_pos_{}", id), Span::mixed_site())
@@ -54,13 +89,13 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
         //   bindings, we have to do lots of tricky logic to get the right
         //   arguments in each invidiual `write` call.
         let mut arg_bindings = TokenStream::new();
-        for (i, arg) in input.args.positional.iter().enumerate() {
+        for (i, arg) in self.args.positional.iter().enumerate() {
             let ident = pos_arg_ident(i as u32);
             arg_bindings.extend(quote! {
                 let #ident = &{ #arg };
             })
         }
-        for (name, arg) in input.args.named.iter() {
+        for (name, arg) in self.args.named.iter() {
             let ident = name_arg_ident(name);
             arg_bindings.extend(quote! {
                 let #ident = &{ #arg };
@@ -74,7 +109,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
         let mut writes = TokenStream::new();
         let mut next_arg_index = 0;
 
-        for segment in input.format_str.fragments {
+        for segment in &self.format_str.fragments {
             match segment {
                 // A formatting fragment. This is the more tricky one. We have
                 // to construct a `std::write!` invocation that has the right
@@ -85,10 +120,10 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                     let mut used_args = BTreeSet::new();
 
                     for (i, arg) in args.into_iter().enumerate() {
-                        let ident = match arg.kind {
+                        let ident = match &arg.kind {
                             ArgRefKind::Next => {
                                 let ident = pos_arg_ident(next_arg_index as u32);
-                                if input.args.positional.get(next_arg_index).is_none() {
+                                if self.args.positional.get(next_arg_index).is_none() {
                                     return Err(
                                         err!("invalid '{{}}' argument reference \
                                             (too few actual arguments)")
@@ -99,8 +134,8 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                                 ident
                             }
                             ArgRefKind::Position(pos) => {
-                                let ident = pos_arg_ident(pos);
-                                if input.args.positional.get(pos as usize).is_none() {
+                                let ident = pos_arg_ident(*pos);
+                                if self.args.positional.get(*pos as usize).is_none() {
                                     return Err(err!(
                                         "invalid reference to positional argument {} (there are \
                                             not that many arguments)",
@@ -112,7 +147,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                             }
                             ArgRefKind::Name(name) => {
                                 let ident = name_arg_ident(&name);
-                                if input.args.named.get(&name).is_none() {
+                                if self.args.named.get(name).is_none() {
                                     return Err(err!("there is no argument named `{}`", name));
                                 }
 
@@ -165,7 +200,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
         }
 
         // Combine everything.
-        let target = &input.target;
+        let target = &self.target;
         Ok(quote! {
             (|| -> Result<(), ::std::io::Error> {
                 use std::io::Write as _;
@@ -177,15 +212,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                 Ok(())
             })()
         })
-    })
-}
-
-/// Input for the `write!` macro.
-#[derive(Debug)]
-struct WriteInput {
-    target: syn::Expr,
-    format_str: FormatStr,
-    args: FormatArgs,
+    }
 }
 
 impl Parse for WriteInput {
