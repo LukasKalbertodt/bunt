@@ -38,12 +38,56 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
         let buf = Ident::new("buf", Span::mixed_site());
         let mut style_stack = Vec::new();
         let mut writes = TokenStream::new();
+        let mut next_arg_index = 0;
 
         for segment in input.format_str.fragments {
             match segment {
-                FormatStrFragment::Str(s) => writes.extend(quote! {
-                    std::write!(#buf, #s)?;
-                }),
+                FormatStrFragment::Fmt { fmt_str, args } => {
+                    let mut arg_tokens = TokenStream::new();
+
+                    // Add positional arguments
+                    for arg in &args {
+                        let arg_expr = match arg.kind {
+                            ArgRefKind::Next => {
+                                let e = input.args.positional.get(next_arg_index).ok_or_else(|| {
+                                    err!("invalid '{{}}' argument reference \
+                                        (too few actual arguments)")
+                                })?;
+                                next_arg_index += 1;
+                                e
+                            },
+                            ArgRefKind::Position(pos) => {
+                                input.args.positional.get(pos as usize).ok_or_else(|| {
+                                    err!(
+                                        "invalid reference to positional argument {} (there are \
+                                            not that many arguments)",
+                                        pos,
+                                    )
+                                })?
+                            }
+
+                            // Skip named args
+                            _ => continue,
+                        };
+
+                        arg_tokens.extend(quote! { #arg_expr, });
+                    }
+
+                    // Add named arguments
+                    for arg in &args {
+                        if let ArgRefKind::Name(name) = &arg.kind {
+                            let arg_expr = input.args.named.get(name)
+                                .ok_or(err!("there is no argument named `{}`", name))?;
+                            arg_tokens.extend(quote! { #name = #arg_expr, });
+                        }
+                    }
+
+                    // Combine everything in `write!` invocation.
+                    writes.extend(quote! {
+                        std::write!(#buf, #fmt_str, #arg_tokens)?;
+                    });
+                }
+
                 FormatStrFragment::StyleStart(style) => {
                     let last_style = style_stack.last().copied().unwrap_or(Style::default());
                     let new_style = style.or(last_style);
@@ -53,6 +97,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                         termcolor::WriteColor::set_color(#buf, &#style_def)?;
                     });
                 }
+
                 FormatStrFragment::StyleEnd => {
                     style_stack.pop().ok_or(err!("unmatched closing style tag"))?;
                     let style = style_stack.last().copied().unwrap_or(Style::default());
@@ -61,7 +106,6 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                         termcolor::WriteColor::set_color(#buf, &#style_def)?;
                     });
                 }
-                _ => {}
             }
         }
 
@@ -107,17 +151,13 @@ impl Parse for WriteInput {
 /// One fragment of the format string.
 #[derive(Debug)]
 enum FormatStrFragment {
-    /// A literal string without any arguments or style blocks.
-    Str(String),
+    /// A format string without style tags, but potentially with arguments.
+    Fmt {
+        /// The format string. TODO: maybe this is useless
+        fmt_str: String,
 
-    /// An `{...}` argument.
-    Arg {
-        /// The argument that's referenced.
-        arg: ArgRef,
-        /// Formatting specifications (the thing after `:`).
-        format_spec: Option<String>,
-        /// An optional styling.
-        style: Option<Style>,
+        /// Information about argument that are referenced.
+        args: Vec<ArgRef>,
     },
 
     /// A `{$...}` style start tag.
@@ -127,15 +167,50 @@ enum FormatStrFragment {
     StyleEnd,
 }
 
+#[derive(Debug)]
+struct ArgRef {
+    kind: ArgRefKind,
+    format_spec: Option<String>,
+}
+
 /// How a format argument is referred to.
 #[derive(Debug)]
-enum ArgRef {
+enum ArgRefKind {
     /// `{}`
     Next,
     /// `{2}`
     Position(u32),
     /// `{peter}`
     Name(String),
+}
+
+impl ArgRef {
+    /// (Partially) parses the inside of an format arg (`{...}`). The given
+    /// string `s` must be the inside of the arg and must *not* contain the
+    /// outer braces.
+    fn parse(s: &str) -> Result<Self, Error> {
+        // Split argument reference and format specs.
+        let arg_ref_end = s.find(':').unwrap_or(s.len());
+        let (arg_str, format_spec) = s.split_at(arg_ref_end);
+
+        // Check kind of argument reference.
+        let kind = if arg_str.is_empty() {
+            ArgRefKind::Next
+        } else if let Ok(pos) = arg_str.parse::<u32>() {
+            ArgRefKind::Position(pos)
+        } else {
+            syn::parse_str::<syn::Ident>(arg_str)?;
+            ArgRefKind::Name(arg_str.into())
+        };
+
+        let format_spec = if format_spec.is_empty() {
+            None
+        } else {
+            Some(format_spec.into())
+        };
+
+        Ok(Self { kind, format_spec })
+    }
 }
 
 /// A parsed format string.
@@ -146,88 +221,110 @@ struct FormatStr {
 
 impl Parse for FormatStr {
     fn parse(input: ParseStream) -> Result<Self, Error> {
+        /// Searches for the next closing `}`. Returns a pair of strings, the
+        /// first starting like `s` and ending at the closing brace, the second
+        /// starting at the brace and ending like `s`. Both strings exclude the
+        /// brace itself. If a closing brace can't be found, an error is
+        /// returned.
+        fn split_at_closing_brace(s: &str, span: Span) -> Result<(&str, &str), Error> {
+            // I *think* there can't be escaped closing braces inside the fmt
+            // format, so we can simply search for a single closing one.
+            let end = s.find("}")
+                .ok_or(err!(span, "unclosed '{{' in format string"))?;
+            Ok((&s[..end], &s[end + 1..]))
+        }
+
+
         let lit = input.parse::<syn::LitStr>()?;
         let raw = lit.value();
-        let mut fragments = Vec::new();
 
+        // Scan the whole string
+        let mut fragments = Vec::new();
         let mut s = &raw[..];
         while !s.is_empty() {
-            if s.starts_with('{') && !s.starts_with("{{") {
-                // ===== An argument or style tag =====
+            let start_string = s;
+            let mut args = Vec::new();
 
-                // I *think* there can't be escaped closing braces inside the
-                // fmt format.
-                let end = s.find('}').ok_or(err!(lit.span(), "unclosed '{{' in format string"))?;
-                let mut inner = &s[1..end];
+            // Scan until we reach a style tag.
+            loop {
+                match () {
+                    // Reached EOF: stop searching!
+                    () if s.is_empty() => break,
 
-                // Check if it's a style start tag, style end tag or argument.
-                let fragment = if inner == "$/" {
-                    FormatStrFragment::StyleEnd
-                } else if inner.starts_with('$') {
-                    let style = Style::parse(&inner[1..], lit.span())?;
-                    FormatStrFragment::StyleStart(style)
-                } else {
-                    // Parse optional style information.
-                    let style = if inner.starts_with('[') {
-                        let style_end = inner.find(']')
-                            .ok_or(err!(lit.span(), "unclosed '[' in format string argument"))?;
-                        let style = Style::parse(&inner[1..style_end], lit.span())?;
-                        inner = &inner[style_end + 1..];
-                        Some(style)
-                    } else {
-                        None
-                    };
+                    // Escaped brace: skip.
+                    () if s.starts_with("{{") => s = &s[2..],
 
-                    // Split argument reference and format specs.
-                    let arg_ref_end = inner.find(':').unwrap_or(inner.len());
-                    let (arg_str, format) = inner.split_at(arg_ref_end);
+                    // Found a style tag: stop searching!
+                    () if s.starts_with("{$") => break,
 
-                    // Check kind of argument reference.
-                    let arg = if arg_str.is_empty() {
-                        ArgRef::Next
-                    } else if let Ok(pos) = arg_str.parse::<u32>() {
-                        ArgRef::Position(pos)
-                    } else {
-                        syn::parse_str::<syn::Ident>(arg_str)?;
-                        ArgRef::Name(arg_str.into())
-                    };
+                    // Found a styled argument: stop searching!
+                    () if s.starts_with("{[") => break,
 
-                    FormatStrFragment::Arg {
-                        arg,
-                        format_spec: if format.is_empty() { None } else { Some(format.into()) },
-                        style,
+                    // An formatting argument. Gather some information about it
+                    // and remember it for later.
+                    () if s.starts_with("{") => {
+                        let (inner, rest) = split_at_closing_brace(&s[1..], lit.span())?;
+                        args.push(ArgRef::parse(inner)?);
+                        s = rest;
                     }
-                };
 
-                fragments.push(fragment);
-                s = &s[end + 1..];
-            } else {
-                // ===== A literal string =====
+                    // Some other character: just continue searching.
+                    _ => s = &s[1..],
+                }
+            }
 
-                // Find the start of the next unescaped `{` or EOF.
-                let end = s.match_indices('{')
-                    .map(|(pos, _)| pos)
-                    .find(|pos| !s[pos + 1..].starts_with('{'))
-                    .unwrap_or(s.len());
+            // Push fragment unless the style tag was at the very start (i.e.
+            // our format fragment is empty).
+            let end_fmt_str = s.as_ptr() as usize - start_string.as_ptr() as usize;
+            let fmt_str = &start_string[..end_fmt_str];
+            if !fmt_str.is_empty() {
+                fragments.push(FormatStrFragment::Fmt { args, fmt_str: fmt_str.into() });
+            }
 
-                let (fragment, rest) = s.split_at(end);
+            if s.is_empty() {
+                break;
+            }
 
-                // Check for unmatched closing braces.
-                let unmatched_closing = fragment.match_indices('}')
-                    .map(|(pos, _)| pos)
-                    .find(|pos| !fragment[pos + 1..].starts_with('}'));
-                if let Some(pos) = unmatched_closing {
-                    let e = err!(
-                        lit.span(),
-                        "unmatched '}}' in format string at position {}",
-                        s.as_ptr() as usize - raw.as_ptr() as usize + pos,
-                    );
-                    return Err(e);
+            // At this point, `s` starts with either a styled argument or a
+            // style tag.
+            match () {
+                // Closing style tag.
+                () if s.starts_with("{$/}") => {
+                    fragments.push(FormatStrFragment::StyleEnd);
+                    s = &s[4..];
                 }
 
-                fragments.push(FormatStrFragment::Str(fragment.into()));
-                s = rest;
-            };
+                // Opening style tag.
+                () if s.starts_with("{$") => {
+                    let (inner, rest) = split_at_closing_brace(&s[2..], lit.span())?;
+                    let style = Style::parse(inner, lit.span())?;
+                    fragments.push(FormatStrFragment::StyleStart(style));
+                    s = rest;
+                }
+
+                () if s.starts_with("{[") => {
+                    let (inner, rest) = split_at_closing_brace(&s[1..], lit.span())?;
+
+                    // Parse style information
+                    let style_end = inner.find(']')
+                        .ok_or(err!(lit.span(), "unclosed '[' in format string argument"))?;
+                    let style = Style::parse(&inner[1..style_end], lit.span())?;
+                    fragments.push(FormatStrFragment::StyleStart(style));
+
+                    // Parse the standard part of this arg reference.
+                    let arg = ArgRef::parse(&inner[style_end + 1..])?;
+                    fragments.push(FormatStrFragment::Fmt {
+                        args: vec![arg],
+                        fmt_str: format!("{{{}}}", &inner[style_end + 1..])
+                    });
+
+                    fragments.push(FormatStrFragment::StyleEnd);
+
+                    s = rest;
+                }
+
+                _ => panic!("bug: at this point, there should be a style tag or styled arg"),
+            }
         }
 
         Ok(Self { fragments })
