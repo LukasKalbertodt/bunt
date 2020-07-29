@@ -4,6 +4,23 @@ use quote::quote;
 use syn::{Error, LitStr};
 
 
+/// Helper macro to easily create an error with a span.
+macro_rules! err {
+    ($span:expr, $($t:tt)+) => { syn::Error::new($span, format!($($t)+)) };
+}
+
+/// Takes one string literal containing a style specification and returns an
+/// expression evaluating to the corresponding `termcolor::ColorSpec` value.
+#[proc_macro]
+pub fn spec(input: TokenStream1) -> TokenStream1 {
+    run(input, |input| {
+        let literal = syn::parse2::<LitStr>(input)?;
+        color_spec(&literal.value(), literal.span())
+    })
+}
+
+/// Performs the conversion from and to `proc_macro::TokenStream` and converts
+/// `Error`s into `compile_error!` tokens.
 fn run(
     input: TokenStream1,
     f: impl FnOnce(TokenStream) -> Result<TokenStream, Error>,
@@ -13,19 +30,9 @@ fn run(
         .into()
 }
 
-macro_rules! err {
-    ($span:expr, $($t:tt)+) => { syn::Error::new($span, format!($($t)+)) };
-}
-
-
-#[proc_macro]
-pub fn style(input: TokenStream1) -> TokenStream1 {
-    run(input, |input| {
-        let literal = syn::parse2::<LitStr>(input)?;
-        color_spec(&literal.value(), literal.span())
-    })
-}
-
+/// Parses the style specification in `spec` (with `span`) and returns a token
+/// stream representing an expression constructing the corresponding `ColorSpec`
+/// value.
 fn color_spec(spec: &str, span: Span) -> Result<TokenStream, Error> {
     let ident = Ident::new("color_spec", Span::mixed_site());
 
@@ -86,11 +93,11 @@ fn color_spec(spec: &str, span: Span) -> Result<TokenStream, Error> {
             false => (&mut previous_fg_color, "foreground"),
         };
         match (&color, *previous_color) {
-            (Some(new), Some(old)) => {
+            (Some(_), Some(old)) => {
                 let e = err!(
                     span,
                     "found '{}' but the {} color was already specified as '{}'",
-                    new,
+                    fragment,
                     color_kind,
                     old,
                 );
@@ -118,7 +125,7 @@ fn color_spec(spec: &str, span: Span) -> Result<TokenStream, Error> {
             (false, None, "!intense") => quote! { #ident .set_intense(false); },
 
             (false, None, other) => {
-                return Err(err!(span, "invalid color spec fragment '{}'", other));
+                return Err(err!(span, "invalid style spec fragment '{}'", other));
             }
         };
 
