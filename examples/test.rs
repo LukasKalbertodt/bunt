@@ -4,6 +4,6 @@
 
 
 fn main() {
-    let x = bunt::style!("bold");
+    let x = bunt::style!("bg:#ffffff+bold+italic");
 
 }

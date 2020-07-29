@@ -28,14 +28,102 @@ pub fn style(input: TokenStream1) -> TokenStream1 {
 
 fn color_spec(spec: &str, span: Span) -> Result<TokenStream, Error> {
     let ident = Ident::new("color_spec", Span::mixed_site());
-    let styles = spec.split('+')
-        .map(|s| {
-            match s {
-                "bold" => Ok(quote! { #ident .set_bold(true); }),
-                other => Err(err!(span, "invalid color spec fragment '{}'", other)),
+
+    let mut styles = TokenStream::new();
+    let mut previous_fg_color = None;
+    let mut previous_bg_color = None;
+    for fragment in spec.split('+').map(str::trim).filter(|s| !s.is_empty()) {
+        let (fragment, is_bg) = match fragment.strip_prefix("bg:") {
+            Some(color) => (color, true),
+            None => (fragment, false),
+        };
+
+        // Parse/obtain color if a color is specified.
+        let color = match fragment {
+            "black" => Some(quote! { Black }),
+            "blue" => Some(quote! { Blue }),
+            "green" => Some(quote! { Green }),
+            "red" => Some(quote! { Red }),
+            "cyan" => Some(quote! { Cyan }),
+            "magenta" => Some(quote! { Magenta }),
+            "yellow" => Some(quote! { Yellow }),
+            "white" => Some(quote! { White }),
+
+            hex if hex.starts_with('#') => {
+                let hex = &hex[1..];
+
+                if hex.len() != 6 {
+                    let e = err!(
+                        span,
+                        "hex color code invalid: 6 digits expected, found {}",
+                        hex.len(),
+                    );
+                    return Err(e);
+                }
+
+                let digits = hex.chars()
+                    .map(|c| {
+                        c.to_digit(16).ok_or_else(|| {
+                            err!(span, "hex color code invalid: {} is not a valid hex digit", c)
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let r = (digits[0] * 16 + digits[1]) as u8;
+                let g = (digits[2] * 16 + digits[3]) as u8;
+                let b = (digits[4] * 16 + digits[5]) as u8;
+
+                Some(quote! { Rgb(#r, #g, #b) })
+            },
+
+            // TODO: Ansi256 colors
+            _ => None,
+        };
+
+        // Check for duplicate color definitions.
+        let (previous_color, color_kind) = match is_bg {
+            true => (&mut previous_bg_color, "background"),
+            false => (&mut previous_fg_color, "foreground"),
+        };
+        match (&color, *previous_color) {
+            (Some(new), Some(old)) => {
+                let e = err!(
+                    span,
+                    "found '{}' but the {} color was already specified as '{}'",
+                    new,
+                    color_kind,
+                    old,
+                );
+                return Err(e);
             }
-        })
-        .collect::<Result<TokenStream, _>>()?;
+            (Some(_), None) => *previous_color = Some(fragment),
+            _ => {}
+        }
+
+        // Obtain the final token stream for method call.
+        let tokens = match (is_bg, color, fragment) {
+            (false, Some(color), _) => quote! { #ident .set_fg(Some(termcolor::Color:: #color ))},
+            (true, Some(color), _) => quote! { #ident .set_bg(Some(termcolor::Color:: #color ))},
+            (true, None, other) => {
+                return Err(err!(span, "'{}' (following 'bg:') is not a valid color", other));
+            }
+
+            (false, None, "bold") => quote! { #ident .set_bold(true); },
+            (false, None, "!bold") => quote! { #ident .set_bold(false); },
+            (false, None, "italic") => quote! { #ident .set_italic(true); },
+            (false, None, "!italic") => quote! { #ident .set_italic(false); },
+            (false, None, "underline") => quote! { #ident .set_underline(true); },
+            (false, None, "!underline") => quote! { #ident .set_underline(false); },
+            (false, None, "intense") => quote! { #ident .set_intense(true); },
+            (false, None, "!intense") => quote! { #ident .set_intense(false); },
+
+            (false, None, other) => {
+                return Err(err!(span, "invalid color spec fragment '{}'", other));
+            }
+        };
+
+        styles.extend(quote! { # tokens ; });
+    }
 
     Ok(quote! {
         {
