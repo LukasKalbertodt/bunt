@@ -78,6 +78,7 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
                         if let ArgRefKind::Name(name) = &arg.kind {
                             let arg_expr = input.args.named.get(name)
                                 .ok_or(err!("there is no argument named `{}`", name))?;
+                            let name = Ident::new(name, Span::call_site());
                             arg_tokens.extend(quote! { #name = #arg_expr, });
                         }
                     }
