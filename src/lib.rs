@@ -40,28 +40,27 @@ pub fn write(input: TokenStream1) -> TokenStream1 {
 pub fn writeln(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
         let mut input = syn::parse2::<WriteInput>(input)?;
-
-        // Add `\n` to the end of the formatting string. Since it is already
-        // parsed, this is a bit more involved.
-        match input.format_str.fragments.last_mut() {
-            Some(FormatStrFragment::Fmt { fmt_str_parts, .. }) => {
-                fmt_str_parts.last_mut()
-                    .expect("bug: fmt_str_parts empty")
-                    .push('\n');
-            }
-            _ => {
-                input.format_str.fragments.push(FormatStrFragment::Fmt {
-                    fmt_str_parts: vec!["\n".into()],
-                    args: vec![],
-                });
-            }
-        }
-
+        input.format_str.add_newline();
         input.gen_output()
     })
 }
 
-/// Input for the `write!` macro.
+#[proc_macro]
+pub fn print(input: TokenStream1) -> TokenStream1 {
+    run(input, |input| syn::parse2::<PrintInput>(input)?.gen_output())
+}
+
+#[proc_macro]
+pub fn println(input: TokenStream1) -> TokenStream1 {
+    run(input, |input| {
+        let mut input = syn::parse2::<PrintInput>(input)?;
+        input.format_str.add_newline();
+        input.gen_output()
+    })
+}
+
+/// Input for the `write!` and `writeln!` macro. Also used by other convenience
+/// macros.
 #[derive(Debug)]
 struct WriteInput {
     target: syn::Expr,
@@ -226,6 +225,38 @@ impl Parse for WriteInput {
     }
 }
 
+/// Input for the `print!` and `println!` macro.
+#[derive(Debug)]
+struct PrintInput {
+    format_str: FormatStr,
+    args: FormatArgs,
+}
+
+impl PrintInput {
+    fn gen_output(self) -> Result<TokenStream, Error> {
+        let target = syn::parse2(quote! {
+            termcolor::StandardStream::stdout(termcolor::ColorChoice::Auto)
+        }).expect("bug: could not parse print target expr");
+
+        let wi = WriteInput {
+            target,
+            format_str: self.format_str,
+            args: self.args,
+        };
+
+        wi.gen_output()
+    }
+}
+
+impl Parse for PrintInput {
+    fn parse(input: ParseStream) -> Result<Self, Error> {
+        let format_str = input.parse()?;
+        let args = input.parse()?;
+
+        Ok(Self { format_str, args })
+    }
+}
+
 /// One fragment of the format string.
 #[derive(Debug)]
 enum FormatStrFragment {
@@ -291,6 +322,30 @@ impl ArgRef {
 #[derive(Debug)]
 struct FormatStr {
     fragments: Vec<FormatStrFragment>,
+}
+
+impl FormatStr {
+    /// Adds `\n` to the end of the formatting string.
+    fn add_newline(&mut self) {
+        match self.fragments.last_mut() {
+            // If the last fragment is an `fmt` one, we can easily add the
+            // newline to its last part (which is guaranteed to exist).
+            Some(FormatStrFragment::Fmt { fmt_str_parts, .. }) => {
+                fmt_str_parts.last_mut()
+                    .expect("bug: fmt_str_parts empty")
+                    .push('\n');
+            }
+
+            // Otherwise (style closing tag is last fragment), we have to add a
+            // new `Fmt` fragment.
+            _ => {
+                self.fragments.push(FormatStrFragment::Fmt {
+                    fmt_str_parts: vec!["\n".into()],
+                    args: vec![],
+                });
+            }
+        }
+    }
 }
 
 impl Parse for FormatStr {
