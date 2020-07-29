@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 /// Helper macro to easily create an error with a span.
 macro_rules! err {
+    ($fmt:literal $($t:tt)*) => { syn::Error::new(Span::call_site(), format!($fmt $($t)*)) };
     ($span:expr, $($t:tt)+) => { syn::Error::new($span, format!($($t)+)) };
 }
 
@@ -31,9 +32,56 @@ pub fn spec(input: TokenStream1) -> TokenStream1 {
 pub fn write(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
         let input: WriteInput = syn::parse2(input)?;
-        dbg!(input);
 
-        Ok(quote!(3))
+        // Prepare the actual process of writing to the target according to the
+        // format string.
+        let buf = Ident::new("buf", Span::mixed_site());
+        let mut style_stack = Vec::new();
+        let mut writes = TokenStream::new();
+
+        for segment in input.format_str.fragments {
+            match segment {
+                FormatStrFragment::Str(s) => writes.extend(quote! {
+                    std::write!(#buf, #s)?;
+                }),
+                FormatStrFragment::StyleStart(style) => {
+                    let last_style = style_stack.last().copied().unwrap_or(Style::default());
+                    let new_style = style.or(last_style);
+                    let style_def = new_style.to_tokens();
+                    style_stack.push(new_style);
+                    writes.extend(quote! {
+                        termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                    });
+                }
+                FormatStrFragment::StyleEnd => {
+                    style_stack.pop().ok_or(err!("unmatched closing style tag"))?;
+                    let style = style_stack.last().copied().unwrap_or(Style::default());
+                    let style_def = style.to_tokens();
+                    writes.extend(quote! {
+                        termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        // Check if the style tags are balanced
+        if !style_stack.is_empty() {
+            return Err(err!("unclosed style tag"));
+        }
+
+        // Combine everything.
+        let target = &input.target;
+        Ok(quote! {
+            (|| -> Result<(), ::std::io::Error> {
+                use std::io::Write as _;
+
+                let #buf = &mut { #target };
+                #writes
+
+                Ok(())
+            })()
+        })
     })
 }
 
@@ -303,17 +351,6 @@ fn run(
 }
 
 
-#[derive(Debug, Default)]
-struct Style {
-    fg: Option<Color>,
-    bg: Option<Color>,
-    bold: Option<bool>,
-    intense: Option<bool>,
-    underline: Option<bool>,
-    italic: Option<bool>,
-    reset: Option<bool>,
-}
-
 #[derive(Debug, Clone, Copy)]
 enum Color {
     Black,
@@ -344,6 +381,17 @@ impl Color {
 
         quote! { termcolor::Color:: #variant }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct Style {
+    fg: Option<Color>,
+    bg: Option<Color>,
+    bold: Option<bool>,
+    intense: Option<bool>,
+    underline: Option<bool>,
+    italic: Option<bool>,
+    reset: Option<bool>,
 }
 
 impl Style {
@@ -424,7 +472,7 @@ impl Style {
             }
 
             macro_rules! set_attr {
-                ($field:ident, $value:expr) => {
+                ($field:ident, $value:expr) => {{
                     if let Some(b) = out.$field {
                         let field_s = stringify!($field);
                         let old = if b { field_s.into() } else { format!("!{}", field_s) };
@@ -437,7 +485,9 @@ impl Style {
                         );
                         return Err(e);
                     }
-                };
+
+                    out.$field = Some($value);
+                }};
             }
 
             // Obtain the final token stream for method call.
@@ -506,6 +556,20 @@ impl Style {
                 #method_calls
                 #ident
             }
+        }
+    }
+
+    /// Like `Option::or`: all style values set in `self` are kept, all unset
+    /// ones are overwritten with the values from `style_b`.
+    fn or(&self, style_b: Self) -> Self {
+        Self {
+            fg: self.fg.or(style_b.fg),
+            bg: self.bg.or(style_b.bg),
+            bold: self.bold.or(style_b.bold),
+            intense: self.intense.or(style_b.intense),
+            underline: self.underline.or(style_b.underline),
+            italic: self.italic.or(style_b.italic),
+            reset: self.reset.or(style_b.reset),
         }
     }
 }
