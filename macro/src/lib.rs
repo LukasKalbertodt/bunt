@@ -23,7 +23,7 @@ macro_rules! err {
 /// Takes one string literal containing a style specification and returns an
 /// expression evaluating to the corresponding `termcolor::ColorSpec` value.
 #[proc_macro]
-pub fn spec(input: TokenStream1) -> TokenStream1 {
+pub fn style(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
         let literal = syn::parse2::<LitStr>(input)?;
         let style = Style::parse(&literal.value(), literal.span())?;
