@@ -1,3 +1,6 @@
+//! These are the docs for the crate `bunt-macro`. This is just implementation
+//! detail, please see the crate `bunt` for the real docs.
+
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -20,8 +23,7 @@ macro_rules! err {
     ($span:expr, $($t:tt)+) => { syn::Error::new($span, format!($($t)+)) };
 }
 
-/// Takes one string literal containing a style specification and returns an
-/// expression evaluating to the corresponding `termcolor::ColorSpec` value.
+// Docs are in the `bunt` reexport.
 #[proc_macro]
 pub fn style(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
@@ -31,11 +33,13 @@ pub fn style(input: TokenStream1) -> TokenStream1 {
     })
 }
 
+// Docs are in the `bunt` reexport.
 #[proc_macro]
 pub fn write(input: TokenStream1) -> TokenStream1 {
     run(input, |input| syn::parse2::<WriteInput>(input)?.gen_output())
 }
 
+// Docs are in the `bunt` reexport.
 #[proc_macro]
 pub fn writeln(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
@@ -45,6 +49,7 @@ pub fn writeln(input: TokenStream1) -> TokenStream1 {
     })
 }
 
+// Docs are in the `bunt` reexport.
 #[proc_macro]
 pub fn print(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
@@ -55,6 +60,7 @@ pub fn print(input: TokenStream1) -> TokenStream1 {
     })
 }
 
+// Docs are in the `bunt` reexport.
 #[proc_macro]
 pub fn println(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
