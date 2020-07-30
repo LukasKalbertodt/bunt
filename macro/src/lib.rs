@@ -175,7 +175,7 @@ impl WriteInput {
                     let style_def = new_style.to_tokens();
                     style_stack.push(new_style);
                     writes.extend(quote! {
-                        termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                        ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)?;
                     });
                 }
 
@@ -187,7 +187,7 @@ impl WriteInput {
                     let style = style_stack.last().copied().unwrap_or(Style::default());
                     let style_def = style.to_tokens();
                     writes.extend(quote! {
-                        termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                        ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)?;
                     });
                 }
             }
@@ -235,7 +235,7 @@ struct PrintInput {
 impl PrintInput {
     fn gen_output(self) -> Result<TokenStream, Error> {
         let target = syn::parse2(quote! {
-            termcolor::StandardStream::stdout(termcolor::ColorChoice::Auto)
+            ::bunt::termcolor::StandardStream::stdout(::bunt::termcolor::ColorChoice::Auto)
         }).expect("bug: could not parse print target expr");
 
         let wi = WriteInput {
@@ -620,7 +620,7 @@ impl Color {
             Self::Rgb(r, g, b) => Some(quote! { Rgb(#r, #g, #b) }),
         };
 
-        quote! { termcolor::Color:: #variant }
+        quote! { ::bunt::termcolor::Color:: #variant }
     }
 }
 
@@ -793,7 +793,7 @@ impl Style {
 
         quote! {
             {
-                let mut #ident = termcolor::ColorSpec::new();
+                let mut #ident = ::bunt::termcolor::ColorSpec::new();
                 #method_calls
                 #ident
             }

@@ -1,0 +1,13 @@
+[package]
+name = "bunt-macro"
+version = "0.1.0"
+authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"
+proc-macro2 = "1.0.19"
+syn = { version = "1", features = ["full", "extra-traits"] }
