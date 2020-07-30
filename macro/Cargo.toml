@@ -3,6 +3,7 @@ name = "bunt-macro"
 version = "0.1.0"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2018"
+description = "Helper crate for `bunt`. Please see that crate's docs for more information."
 
 [lib]
 proc-macro = true
