@@ -9,7 +9,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1"
-proc-macro2 = "1"
+proc-macro2 = "1.0.19"
 syn = { version = "1", features = ["full", "extra-traits"] }
 
 [dev-dependencies]
