@@ -1,4 +1,4 @@
-//! These are the docs for the crate `bunt-macro`. This is just implementation
+//! These are the docs for the crate `bunt-macros`. This is just implementation
 //! detail, please see the crate `bunt` for the real docs.
 
 use proc_macro::TokenStream as TokenStream1;

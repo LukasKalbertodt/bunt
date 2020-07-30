@@ -144,7 +144,7 @@ pub extern crate termcolor;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macro::write;
+pub use bunt_macros::write;
 
 /// Writes formatted data with newline to a `termcolor::WriteColor` target.
 ///
@@ -159,7 +159,7 @@ pub use bunt_macro::write;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macro::writeln;
+pub use bunt_macros::writeln;
 
 /// Writes formatted data to stdout (with `ColorChoice::Auto`).
 ///
@@ -173,7 +173,7 @@ pub use bunt_macro::writeln;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macro::print;
+pub use bunt_macros::print;
 
 /// Writes formatted data with newline to stdout (with `ColorChoice::Auto`).
 ///
@@ -184,7 +184,7 @@ pub use bunt_macro::print;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macro::println;
+pub use bunt_macros::println;
 
 /// Parses the given style specification string and returns the corresponding
 /// `termcolor::ColorSpec` value.
@@ -206,4 +206,4 @@ pub use bunt_macro::println;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macro::style;
+pub use bunt_macros::style;

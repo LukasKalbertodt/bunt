@@ -17,5 +17,5 @@ keywords = ["color", "term", "terminal", "format", "style"]
 categories = ["command-line-interface"]
 
 [dependencies]
-bunt-macro = { path = "macro"}
+bunt-macros = { version = "0.1.0", path = "macros" }
 termcolor = "1"
