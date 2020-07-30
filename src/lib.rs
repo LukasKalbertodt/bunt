@@ -383,10 +383,17 @@ impl Parse for FormatStr {
             // Scan until we reach a style tag.
             let mut scanner = s;
             loop {
-                match () {
-                    // Reached EOF: stop searching!
-                    () if scanner.is_empty() => break,
+                match scanner.find('{') {
+                    Some(brace_pos) => scanner = &scanner[brace_pos..],
+                    None => {
+                        // EOF reached: stop searching
+                        scanner = &scanner[scanner.len()..];
+                        break;
+                    }
+                }
 
+
+                match () {
                     // Escaped brace: skip.
                     () if scanner.starts_with("{{") => scanner = &scanner[2..],
 
@@ -399,16 +406,13 @@ impl Parse for FormatStr {
 
                     // An formatting argument. Gather some information about it
                     // and remember it for later.
-                    () if scanner.starts_with("{") => {
+                    _ => {
                         let (inner, rest) = split_at_closing_brace(&scanner[1..], lit.span())?;
                         args.push(ArgRef::parse(inner)?);
                         fmt_str_parts.push(string_without(s, scanner).to_owned());
                         s = rest;
                         scanner = rest;
                     }
-
-                    // Some other character: just continue searching.
-                    _ => scanner = &scanner[1..],
                 }
             }
 
