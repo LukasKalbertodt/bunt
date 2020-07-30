@@ -23,7 +23,7 @@ bunt::println!("Here is some data: {[green]:?}. {$bold}Length: {[cyan]}{/$}", v,
     <img src=".github/readme-image.png" width=75%"></img>
 </p>
 
-See [**the documentation**](TODO) for more information.
+See [**the documentation**](https://docs.rs/bunt) for more information.
 
 ## Status of this project
 
