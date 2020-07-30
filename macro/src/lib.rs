@@ -163,7 +163,7 @@ impl WriteInput {
                             }
                         };
 
-                        std::write!(fmt_str, "{{{}:{}}}", ident, arg.format_spec).unwrap();
+                        std::write!(fmt_str, "{{{}{}}}", ident, arg.format_spec).unwrap();
                         used_args.insert(ident);
                         fmt_str.push_str(&fmt_str_parts[i + 1]);
                     }
