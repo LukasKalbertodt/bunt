@@ -14,6 +14,10 @@ let v = vec![1, 2, 3];
 bunt::println!("Here is some data: {[green]:?}. {$bold}Length: {[cyan]}{/$}", v, v.len());
 ```
 
+<p align="center">
+    <img src=".github/readme-image.png" width=75%"></img>
+</p>
+
 See [**the documentation**](TODO) for more information.
 
 ## Status of this project
