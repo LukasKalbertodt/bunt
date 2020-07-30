@@ -47,7 +47,12 @@ pub fn writeln(input: TokenStream1) -> TokenStream1 {
 
 #[proc_macro]
 pub fn print(input: TokenStream1) -> TokenStream1 {
-    run(input, |input| syn::parse2::<PrintInput>(input)?.gen_output())
+    run(input, |input| {
+        let out = syn::parse2::<PrintInput>(input)?.gen_output()?;
+        Ok(quote! {
+            #out.expect("failed to write to stdout in `bunt::print`")
+        })
+    })
 }
 
 #[proc_macro]
@@ -55,7 +60,11 @@ pub fn println(input: TokenStream1) -> TokenStream1 {
     run(input, |input| {
         let mut input = syn::parse2::<PrintInput>(input)?;
         input.format_str.add_newline();
-        input.gen_output()
+        let out = input.gen_output()?;
+
+        Ok(quote! {
+            #out.expect("failed to write to stdout in `bunt::println`")
+        })
     })
 }
 
