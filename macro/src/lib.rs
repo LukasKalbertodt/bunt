@@ -106,13 +106,13 @@ impl WriteInput {
         for (i, arg) in self.args.positional.iter().enumerate() {
             let ident = pos_arg_ident(i as u32);
             arg_bindings.extend(quote! {
-                let #ident = &{ #arg };
+                let #ident = &#arg;
             })
         }
         for (name, arg) in self.args.named.iter() {
             let ident = name_arg_ident(name);
             arg_bindings.extend(quote! {
-                let #ident = &{ #arg };
+                let #ident = &#arg;
             })
         }
 
