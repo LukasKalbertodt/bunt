@@ -64,7 +64,6 @@ fn main() {
         sep,
     );
 
-
     // ===== Foreground vs. style ===============================================================
     println!();
     bunt::println!("{$bold+blue+intense}Foreground and background colors:{/$}");
@@ -72,8 +71,10 @@ fn main() {
 
     let dummy = "  Bunt ♥   ";
 
-    println!("         bg:black   bg:blue    bg:green   bg:red     bg:cyan    \
-        bg:magenta bg:yellow  bg:white");
+    println!(
+        "         bg:black   bg:blue    bg:green   bg:red     bg:cyan    \
+        bg:magenta bg:yellow  bg:white"
+    );
     bunt::println!(
         "black    {$black}\
             {[bg:black]0}{[bg:blue]0}{[bg:green]0}{[bg:red]0}{[bg:cyan]0}{[bg:magenta]0}{[bg:yellow]0}{[bg:white]0}\

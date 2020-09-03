@@ -123,7 +123,6 @@
 // the macros.
 pub extern crate termcolor;
 
-
 /// Writes formatted data to a `termcolor::WriteColor` target.
 ///
 /// This is a more general version of `print` as you can specify the destination
