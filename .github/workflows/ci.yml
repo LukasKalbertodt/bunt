@@ -29,6 +29,8 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('cache-fingerprint') }}
+    - name: Cargo fmt
+      run: cargo fmt --all -- --check
     - name: Build
       run: cargo build
     - name: Run tests
