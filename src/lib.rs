@@ -20,7 +20,7 @@
 //!
 //! With `{$style_spec}...{/$}`, you can apply a style to a section of your
 //! string (which can also contain arguments). The start tag `{$...}` contains
-//! the style specification, while the end tag is always `{/%}`. These tags can
+//! the style specification, while the end tag is always `{/$}`. These tags can
 //! also be nested.
 //!
 //! ```
