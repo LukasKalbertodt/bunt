@@ -8,6 +8,7 @@ Bunt
 
 `bunt` offers macros to easily print colored and formatted text to a terminal.
 It is just a convenience API on top of [`termcolor`](https://crates.io/crates/termcolor).
+`bunt` is implemented using procedural macros, but as it does not depend on `syn`, compilation is fairly quick (≈1.5s on my machine, including all dependencies).
 
 ```rust
 // Style tags will color/format text between the tags.
@@ -27,7 +28,8 @@ See [**the documentation**](https://docs.rs/bunt) for more information.
 
 ## Status of this project
 
-Very young project. Syntax is by no means final yet.
+This is still a young project, but I already use it in two applications of mine.
+The syntax is certainly not final yet.
 [Seeking feedback from the community!](https://github.com/LukasKalbertodt/bunt/issues/1)
 
 
