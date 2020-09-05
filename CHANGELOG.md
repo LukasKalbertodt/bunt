@@ -4,11 +4,17 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+### Breaking changes
+- Minimal Rust version bumped to 1.46.0
+
+### Changed
+- `syn` dependency removed
 
 
 ## [0.1.1] - 2020-09-05
 ### Fixed
 - Minor documentation fixes
+
 
 ## 0.1.0 - 2020-07-30
 ### Added
