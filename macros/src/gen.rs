@@ -6,7 +6,10 @@ use std::{
     collections::BTreeSet,
     fmt::Write,
 };
-use crate::{Error, WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr};
+use crate::{
+    err::Error,
+    ir::{WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr},
+};
 
 
 impl WriteInput {

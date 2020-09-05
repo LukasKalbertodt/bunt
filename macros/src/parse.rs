@@ -6,8 +6,11 @@ use proc_macro2::{
 };
 use std::collections::HashMap;
 use crate::{
-    ArgRefKind, ArgRef, Error, Expr, WriteInput, FormatStr, Style, Color,
-    FormatStrFragment, FormatArgs,
+    err::Error,
+    ir::{
+        ArgRefKind, ArgRef, Expr, WriteInput, FormatStr, Style, Color,
+        FormatStrFragment, FormatArgs,
+    },
 };
 
 
