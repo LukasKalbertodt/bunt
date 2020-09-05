@@ -1,5 +1,8 @@
+//! Just a function to parse a string literal to a `String`. Something that
+//! should be part of `proc-macro`... but ok, we do it ourselves. Of course,
+//! syn also offers that functionality, but we want to avoid that dependency.
+
 use proc_macro2::Literal;
-use quote::quote;
 use super::Error;
 
 
@@ -42,15 +45,15 @@ pub(crate) fn parse_str_literal(lit: &Literal) -> Result<String, Error> {
             // last `"`.
             let escape = &s[i + pos..];
             let (c, len) = match escape.as_bytes()[1] {
-                b'n' => ('\n', 2),
-                b'r' => ('\r', 2),
-                b't' => ('\t', 2),
-                b'0' => ('\0', 2),
-                b'\\' => ('\\', 2),
+                b'n' => (Some('\n'), 2),
+                b'r' => (Some('\r'), 2),
+                b't' => (Some('\t'), 2),
+                b'0' => (Some('\0'), 2),
+                b'\\' => (Some('\\'), 2),
                 b'x' => {
                     let v = u8::from_str_radix(&escape[2..4], 16)
                         .expect("bug: invalid \\x escape");
-                    (v.into(), 4)
+                    (Some(v.into()), 4)
                 }
                 b'u' => {
                     let end = escape.find('}').expect("invalid \\u escape");
@@ -58,12 +61,22 @@ pub(crate) fn parse_str_literal(lit: &Literal) -> Result<String, Error> {
                     let v = u32::from_str_radix(&escape[3..end], 16)
                         .expect("invalid \\u escape");
                     let c = std::char::from_u32(v).expect("invalid value in \\u escape");
-                    (c, end + 1)
+                    (Some(c), end + 1)
+                }
+                b'\n' => {
+                    let whitespace_len = escape[2..]
+                        .char_indices()
+                        .find(|(_, c)| !c.is_whitespace())
+                        .map(|(i, _)| i)
+                        .unwrap_or(escape.len() - 2);
+                    (None, whitespace_len + 2)
                 }
                 _ => panic!("bug: unknown escape code :/"),
             };
 
-            out.push(c);
+            if let Some(c) = c {
+                out.push(c);
+            }
             i += pos + len;
         }
 
