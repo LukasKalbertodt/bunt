@@ -1,98 +1,18 @@
-//! Parse the macro input into an intermediate representation.
-
 use proc_macro2::{
-    Span, TokenStream, Delimiter, TokenTree, Spacing,
+    Span,
     token_stream::IntoIter as TokenIterator,
 };
 use unicode_xid::UnicodeXID;
-use std::{str::Chars, collections::HashMap};
+use std::str::Chars;
 use crate::{
     err::Error,
     ir::{
-        ArgRefKind, ArgRef, Expr, WriteInput, FormatStr, Style, Color,
-        FormatStrFragment, FormatArgs, FormatSpec, Align, Sign, Width, Precision,
+        ArgRefKind, ArgRef, FormatStr, Style,
+        FormatStrFragment, FormatSpec, Align, Sign, Width, Precision,
     },
 };
+use super::{parse, expect_helper_group, lit::expect_str_literal};
 
-
-/// Helper function to parse from a token stream. Makes sure the iterator is
-/// empty after `f` returns.
-pub(crate) fn parse<F, O>(tokens: TokenStream, f: F) -> Result<O, Error>
-where
-    F: FnOnce(&mut TokenIterator) -> Result<O, Error>,
-{
-    let mut it = tokens.into_iter();
-    let out = f(&mut it)?;
-
-    if let Some(tt) = it.next() {
-        return Err(err!(tt.span(), "unexpected additional tokens"));
-    }
-
-    Ok(out)
-}
-
-/// Tries to parse a string literal.
-fn parse_str_literal(it: &mut TokenIterator) -> Result<(String, Span), Error> {
-    match it.next() {
-        Some(TokenTree::Literal(lit)) => Ok((
-            crate::literal::parse_str_literal(&lit)?,
-            lit.span(),
-        )),
-        Some(tt) => {
-            Err(err!(tt.span(), "expected string literal, found different token tree"))
-        }
-        None => Err(err!("expected string literal, found EOF")),
-    }
-}
-
-/// Tries to parse a helper group (a group with `None` or `()` delimiter).
-///
-/// These groups are inserted by the declarative macro wrappers in `bunt` to
-/// make parsing in `bunt-macros` easier. In particular, all expressions are
-/// wrapped in these group, allowing us to skip over them without having a Rust
-/// expression parser.
-fn expect_helper_group(tt: Option<TokenTree>) -> Result<(TokenStream, Span), Error> {
-    match tt {
-        Some(TokenTree::Group(g))
-            if g.delimiter() == Delimiter::None || g.delimiter() == Delimiter::Parenthesis =>
-        {
-            Ok((g.stream(), g.span()))
-        }
-        Some(TokenTree::Group(g)) => {
-            Err(err!(
-                g.span(),
-                "expected none or () delimited group, but delimiter is {:?} (note: do not use \
-                    the macros from `bunt-macros` directly, but only through `bunt`)",
-                g.delimiter(),
-            ))
-        }
-        Some(tt) => {
-            Err(err!(
-                tt.span(),
-                "expected none or () delimited group, but found different token tree (note: do \
-                    not use the macros from `bunt-macros` directly, but only through `bunt`)",
-            ))
-        }
-        None => Err(err!("expected none or () delimited group, found EOF")),
-    }
-}
-
-impl WriteInput {
-    pub(crate) fn parse(it: &mut TokenIterator) -> Result<Self, Error> {
-        let target = Expr::parse(it)?;
-        let format_str = FormatStr::parse(it)?;
-        let args = FormatArgs::parse(it)?;
-
-        Ok(Self { target, format_str, args })
-    }
-}
-
-impl Expr {
-    pub(crate) fn parse(it: &mut TokenIterator) -> Result<Self, Error> {
-        let (tokens, span) = expect_helper_group(it.next())?;
-        Ok(Self { tokens, span })
-    }
-}
 
 impl FormatStr {
     pub(crate) fn parse(it: &mut TokenIterator) -> Result<Self, Error> {
@@ -110,7 +30,7 @@ impl FormatStr {
         }
 
         let (inner, _) = expect_helper_group(it.next())?;
-        let (raw, span) = parse(inner, parse_str_literal)?;
+        let (raw, span) = parse(inner, expect_str_literal)?;
 
         // Scan the whole string
         let mut fragments = Vec::new();
@@ -450,191 +370,5 @@ impl Sign {
             '-' => Some(Self::Minus),
             _ => None,
         }
-    }
-}
-
-impl Style {
-    /// Parses the style specifiction assuming the token stream contains a
-    /// single string literal.
-    pub(crate) fn parse_from_tokens(tokens: TokenStream) -> Result<Self, Error> {
-        let (s, span) = parse(tokens, parse_str_literal)?;
-        Self::parse(&s, span)
-    }
-
-    /// Parses the style specification in `spec` (with `span`) and returns a token
-    /// stream representing an expression constructing the corresponding `ColorSpec`
-    /// value.
-    fn parse(spec: &str, span: Span) -> Result<Self, Error> {
-        let mut out = Self::default();
-
-        let mut previous_fg_color = None;
-        let mut previous_bg_color = None;
-        for fragment in spec.split('+').map(str::trim).filter(|s| !s.is_empty()) {
-            let (fragment, is_bg) = match fragment.strip_prefix("bg:") {
-                Some(color) => (color, true),
-                None => (fragment, false),
-            };
-
-            // Parse/obtain color if a color is specified.
-            let color = match fragment {
-                "black" => Some(Color::Black),
-                "blue" => Some(Color::Blue),
-                "green" => Some(Color::Green),
-                "red" => Some(Color::Red),
-                "cyan" => Some(Color::Cyan),
-                "magenta" => Some(Color::Magenta),
-                "yellow" => Some(Color::Yellow),
-                "white" => Some(Color::White),
-
-                hex if hex.starts_with('#') => {
-                    let hex = &hex[1..];
-
-                    if hex.len() != 6 {
-                        let e = err!(
-                            span,
-                            "hex color code invalid: 6 digits expected, found {}",
-                            hex.len(),
-                        );
-                        return Err(e);
-                    }
-
-                    let digits = hex.chars()
-                        .map(|c| {
-                            c.to_digit(16).ok_or_else(|| {
-                                err!(span, "hex color code invalid: {} is not a valid hex digit", c)
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-
-                    let r = (digits[0] * 16 + digits[1]) as u8;
-                    let g = (digits[2] * 16 + digits[3]) as u8;
-                    let b = (digits[4] * 16 + digits[5]) as u8;
-
-                    Some(Color::Rgb(r, g, b))
-                },
-
-                // TODO: Ansi256 colors
-                _ => None,
-            };
-
-            // Check for duplicate color definitions.
-            let (previous_color, color_kind) = match is_bg {
-                true => (&mut previous_bg_color, "background"),
-                false => (&mut previous_fg_color, "foreground"),
-            };
-            match (&color, *previous_color) {
-                (Some(_), Some(old)) => {
-                    let e = err!(
-                        span,
-                        "found '{}' but the {} color was already specified as '{}'",
-                        fragment,
-                        color_kind,
-                        old,
-                    );
-                    return Err(e);
-                }
-                (Some(_), None) => *previous_color = Some(fragment),
-                _ => {}
-            }
-
-            macro_rules! set_attr {
-                ($field:ident, $value:expr) => {{
-                    if let Some(b) = out.$field {
-                        let field_s = stringify!($field);
-                        let old = if b { field_s.into() } else { format!("!{}", field_s) };
-                        let new = if $value { field_s.into() } else { format!("!{}", field_s) };
-                        let e = err!(
-                            span,
-                            "invalid style definition: found '{}', but '{}' was specified before",
-                            new,
-                            old,
-                        );
-                        return Err(e);
-                    }
-
-                    out.$field = Some($value);
-                }};
-            }
-
-            // Obtain the final token stream for method call.
-            match (is_bg, color, fragment) {
-                (false, Some(color), _) => out.fg = Some(color),
-                (true, Some(color), _) => out.bg = Some(color),
-                (true, None, other) => {
-                    return Err(err!(span, "'{}' (following 'bg:') is not a valid color", other));
-                }
-
-                (false, None, "bold") => set_attr!(bold, true),
-                (false, None, "!bold") => set_attr!(bold, false),
-                (false, None, "italic") => set_attr!(italic, true),
-                (false, None, "!italic") => set_attr!(italic, false),
-                (false, None, "underline") => set_attr!(underline, true),
-                (false, None, "!underline") => set_attr!(underline, false),
-                (false, None, "intense") => set_attr!(intense, true),
-                (false, None, "!intense") => set_attr!(intense, false),
-
-                (false, None, other) => {
-                    return Err(err!(span, "invalid style spec fragment '{}'", other));
-                }
-            }
-        }
-
-        Ok(out)
-    }
-}
-
-impl FormatArgs {
-    fn parse(it: &mut TokenIterator) -> Result<Self, Error> {
-        /// Checks if the token stream starting with `tt0` and `tt1` is a named
-        /// argument. If so, returns the name of the argument, otherwise
-        /// (positional argument) returns `None`.
-        fn get_name(tt0: &Option<TokenTree>, tt1: &Option<TokenTree>) -> Option<String> {
-            if let (Some(TokenTree::Ident(name)), Some(TokenTree::Punct(punct))) = (tt0, tt1) {
-                if punct.as_char() == '=' && punct.spacing() == Spacing::Alone {
-                    return Some(name.to_string())
-                }
-            }
-
-            None
-        }
-
-        let mut exprs = Vec::new();
-        let mut name_indices = HashMap::new();
-        let mut saw_named = false;
-
-        // The remaining tokens should all be `None` delimited groups each
-        // representing one argument.
-        for arg_group in it {
-            let (arg, span) = expect_helper_group(Some(arg_group))?;
-            let mut it = arg.into_iter();
-            let tt0 = it.next();
-            let tt1 = it.next();
-
-            if let Some(name) = get_name(&tt0, &tt1) {
-                saw_named = true;
-
-                let expr = Expr {
-                    tokens: it.collect(),
-                    span,
-                };
-                let index = exprs.len();
-                exprs.push(expr);
-                name_indices.insert(name, index);
-            } else {
-                if saw_named {
-                    let e = err!(span, "positional argument after named arguments is not allowed");
-                    return Err(e);
-                }
-
-                let expr = Expr {
-                    tokens: vec![tt0, tt1].into_iter().filter_map(|tt| tt).chain(it).collect(),
-                    span,
-                };
-                exprs.push(expr);
-            }
-
-        }
-
-        Ok(Self { exprs, name_indices })
     }
 }

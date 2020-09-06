@@ -1,16 +1,27 @@
-//! Just a function to parse a string literal to a `String`. Something that
-//! should be part of `proc-macro`... but ok, we do it ourselves. Of course,
-//! syn also offers that functionality, but we want to avoid that dependency.
+use proc_macro2::{
+    Span, TokenTree,
+    token_stream::IntoIter as TokenIterator, Literal,
+};
+use crate::err::Error;
 
-use proc_macro2::Literal;
-use super::Error;
 
+/// Tries to parse a string literal.
+pub(super) fn expect_str_literal(it: &mut TokenIterator) -> Result<(String, Span), Error> {
+    match it.next() {
+        Some(TokenTree::Literal(lit)) => Ok((
+            parse_str_literal(&lit)?,
+            lit.span(),
+        )),
+        Some(tt) => {
+            Err(err!(tt.span(), "expected string literal, found different token tree"))
+        }
+        None => Err(err!("expected string literal, found EOF")),
+    }
+}
 
 /// Parses a string literal into the actual string data. Returns an error if the
 /// literal is not a string or raw string literal.
-pub(crate) fn parse_str_literal(lit: &Literal) -> Result<String, Error> {
-    // println!("{:?} -> {}", lit, lit.to_string());
-
+fn parse_str_literal(lit: &Literal) -> Result<String, Error> {
     // In the parsing below, we make use of the fact that the string comes from
     // a `Literal`, i.e. we already know it represents a valid literal. There
     // are only some debug asserts in there to make sure our assumptions are not
@@ -91,7 +102,6 @@ pub(crate) fn parse_str_literal(lit: &Literal) -> Result<String, Error> {
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
