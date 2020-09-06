@@ -4,12 +4,13 @@ use proc_macro2::{
     Span, TokenStream, Delimiter, TokenTree, Spacing,
     token_stream::IntoIter as TokenIterator,
 };
-use std::collections::HashMap;
+use unicode_xid::UnicodeXID;
+use std::{str::Chars, collections::HashMap};
 use crate::{
     err::Error,
     ir::{
         ArgRefKind, ArgRef, Expr, WriteInput, FormatStr, Style, Color,
-        FormatStrFragment, FormatArgs,
+        FormatStrFragment, FormatArgs, FormatSpec, Align, Sign, Width, Precision,
     },
 };
 
@@ -225,8 +226,10 @@ impl ArgRef {
     /// outer braces.
     pub(crate) fn parse(s: &str) -> Result<Self, Error> {
         // Split argument reference and format specs.
-        let arg_ref_end = s.find(':').unwrap_or(s.len());
-        let (arg_str, format_spec) = s.split_at(arg_ref_end);
+        let (arg_str, format_spec) = match s.find(':') {
+            None => (s, ""),
+            Some(colon_pos) => (&s[..colon_pos], &s[colon_pos + 1..]),
+        };
 
         // Check kind of argument reference.
         let kind = if arg_str.is_empty() {
@@ -238,7 +241,215 @@ impl ArgRef {
             ArgRefKind::Name(arg_str.into())
         };
 
-        Ok(Self { kind, format_spec: format_spec.into() })
+        let format_spec = FormatSpec::parse(format_spec)?;
+
+        Ok(Self { kind, format_spec })
+    }
+}
+
+impl FormatSpec {
+    /// Parses the format specification that comes after the `:` inside an
+    /// `{...}` argument. The given string must not include the `:` but might be
+    /// empty.
+    pub(crate) fn parse(s: &str) -> Result<Self, Error> {
+        /// Helper iterator for scanning the input
+        struct Peek2<'a> {
+            peek: Option<char>,
+            peek2: Option<char>,
+            rest: Chars<'a>,
+        }
+
+        impl<'a> Peek2<'a> {
+            fn new(s: &'a str) -> Self {
+                let mut rest = s.chars();
+                let peek = rest.next();
+                let peek2 = rest.next();
+
+                Self { peek, peek2, rest }
+            }
+
+            fn next_if<O>(&mut self, f: impl FnOnce(char) -> Option<O>) -> Option<O> {
+                let out = self.peek.and_then(f);
+                if out.is_some() {
+                    self.next();
+                }
+                out
+            }
+
+            fn next_if_eq(&mut self, expected: char) -> bool {
+                if self.peek == Some(expected) {
+                    self.next();
+                    true
+                } else {
+                    false
+                }
+            }
+
+            /// Parses one decimal number and returns whether or not it was
+            /// terminated by `$`.
+            fn parse_num(&mut self) -> Result<(usize, bool), Error> {
+                let mut num: usize = 0;
+                while matches!(self.peek, Some('0'..='9')) {
+                    num = num.checked_mul(10)
+                        .and_then(|num| {
+                            num.checked_add((self.next().unwrap() as u32 - '0' as u32) as usize)
+                        })
+                        .ok_or(err!("width parameter value overflowed `usize`"))?;
+                }
+
+                let arg = self.next_if_eq('$');
+                Ok((num, arg))
+            }
+
+            /// Parses a Rust identifier terminated by '$'. When calling this
+            /// method, `self.peek.map_or(false, |c| c.is_xid_start())` must be
+            /// true.
+            fn parse_ident(&mut self) -> Result<String, Error> {
+                let mut name = String::from(self.next().unwrap());
+                while self.peek.map_or(false, |c| c.is_xid_continue()) {
+                    name.push(self.next().unwrap());
+                }
+
+                if !self.next_if_eq('$') {
+                    return Err(err!(
+                        "invalid format string specification: width/precision named parameter \
+                            does not end with '$'. Note: try the `std` macros to get much better \
+                            error reporting."
+                    ));
+                }
+
+                Ok(name)
+            }
+        }
+
+        impl Iterator for Peek2<'_> {
+            type Item = char;
+            fn next(&mut self) -> Option<Self::Item> {
+                let out = self.peek.take();
+                if out.is_none() {
+                    return None;
+                }
+
+                self.peek = self.peek2;
+                self.peek2 = self.rest.next();
+
+                out
+            }
+        }
+
+
+        let mut it = Peek2::new(s);
+
+        // Fill and align. The former can only exist if the latter also exists.
+        let (fill, align) = if let Some(align) = it.next_if(Align::from_char) {
+            (None, Some(align))
+        } else if let Some(align) = it.peek2.and_then(Align::from_char) {
+            let fill = it.next().unwrap();
+            it.next().unwrap();
+            (Some(fill), Some(align))
+        } else {
+            (None, None)
+        };
+
+        // Simple flags.
+        let sign = it.next_if(Sign::from_char);
+        let alternate = it.next_if_eq('#');
+        let zero = it.next_if_eq('0');
+
+        // Width or early exit.
+        let width = match it.peek {
+            // Either a width constant (`8`) or referring to a positional
+            // parameter (`2$`).
+            Some('0'..='9') => {
+                let (num, dollar) = it.parse_num()?;
+
+                if dollar {
+                    Some(Width::Position(num))
+                } else {
+                    Some(Width::Constant(num))
+                }
+            }
+
+            // The "type" (e.g. `?`, `X`) determining the formatting trait. This
+            // means we are done here.
+            Some(c) if it.peek2.is_none() => {
+                return Ok(Self {
+                    fill,
+                    align,
+                    sign,
+                    alternate,
+                    zero,
+                    width: None,
+                    precision: None,
+                    ty: Some(c),
+                });
+            }
+
+            // The start of a `width` named parameter (`foo$`).
+            Some(c) if c.is_xid_start() => Some(Width::Name(it.parse_ident()?)),
+            _ => None,
+        };
+
+        // Precision starting with '.'.
+        let precision = if it.next_if_eq('.') {
+            if it.next_if_eq('*') {
+                Some(Precision::Bundled)
+            } else if matches!(it.peek, Some('0'..='9')) {
+                let (num, dollar) = it.parse_num()?;
+
+                if dollar {
+                    Some(Precision::Position(num))
+                } else {
+                    Some(Precision::Constant(num))
+                }
+            } else {
+                Some(Precision::Name(it.parse_ident()?))
+            }
+        } else {
+            None
+        };
+
+        // Parse type char and make sure nothing else is left.
+        let ty = it.next();
+        if let Some(c) = it.next() {
+            return Err(err!(
+                "expected end of format specification, but found '{}'. Note: use the std \
+                    macros to get much better error reporting.",
+                c,
+            ));
+        }
+
+        Ok(Self {
+            fill,
+            align,
+            sign,
+            alternate,
+            zero,
+            width,
+            precision,
+            ty,
+        })
+    }
+}
+
+impl Align {
+    fn from_char(c: char) -> Option<Self> {
+        match c {
+            '<' => Some(Self::Left),
+            '^' => Some(Self::Center),
+            '>' => Some(Self::Right),
+            _ => None,
+        }
+    }
+}
+
+impl Sign {
+    fn from_char(c: char) -> Option<Self> {
+        match c {
+            '+' => Some(Self::Plus),
+            '-' => Some(Self::Minus),
+            _ => None,
+        }
     }
 }
 

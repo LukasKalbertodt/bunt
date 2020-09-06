@@ -76,7 +76,7 @@ pub(crate) enum FormatStrFragment {
 #[derive(Debug)]
 pub(crate) struct ArgRef {
     pub(crate) kind: ArgRefKind,
-    pub(crate) format_spec: String,
+    pub(crate) format_spec: FormatSpec,
 }
 
 /// How a format argument is referred to.
@@ -88,6 +88,68 @@ pub(crate) enum ArgRefKind {
     Position(usize),
     /// `{peter}`
     Name(String),
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) struct FormatSpec {
+    pub(crate) fill: Option<char>,
+    pub(crate) align: Option<Align>,
+    pub(crate) sign: Option<Sign>,
+    pub(crate) alternate: bool,
+    pub(crate) zero: bool,
+    pub(crate) width: Option<Width>,
+    pub(crate) precision: Option<Precision>,
+    pub(crate) ty: Option<char>,
+}
+
+#[cfg(test)]
+impl Default for FormatSpec {
+    fn default() -> Self {
+        Self {
+            fill: None,
+            align: None,
+            sign: None,
+            alternate: false,
+            zero: false,
+            width: None,
+            precision: None,
+            ty: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Align {
+    Left,
+    Center,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Sign {
+    Plus,
+    Minus,
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Width {
+    Constant(usize),
+    Name(String),
+    Position(usize),
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Precision {
+    Constant(usize),
+    Name(String),
+    Position(usize),
+    /// `.*`
+    Bundled,
 }
 
 /// Parsed formatting arguments.

@@ -11,6 +11,9 @@ mod ir;
 mod literal;
 mod parse;
 
+#[cfg(test)]
+mod tests;
+
 use crate::{
     err::Error,
     ir::{Style, WriteInput},

@@ -4,11 +4,11 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use std::{
     collections::BTreeSet,
-    fmt::Write,
+    fmt::{self, Write},
 };
 use crate::{
     err::Error,
-    ir::{WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr},
+    ir::{WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr, FormatSpec, Align, Sign, Width, Precision},
 };
 
 
@@ -85,7 +85,7 @@ impl WriteInput {
                             }
                         };
 
-                        std::write!(fmt_str, "{{{}{}}}", ident, arg.format_spec).unwrap();
+                        std::write!(fmt_str, "{{{}:{}}}", ident, arg.format_spec).unwrap();
                         used_args.insert(ident);
                         fmt_str.push_str(&fmt_str_parts[i + 1]);
                     }
@@ -148,6 +148,56 @@ impl WriteInput {
 impl quote::ToTokens for Expr {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(self.tokens.clone())
+    }
+}
+
+impl fmt::Display for FormatSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(fill) = self.fill {
+            f.write_char(fill)?;
+        }
+        if let Some(align) = self.align {
+            let c = match align {
+                Align::Left => '<',
+                Align::Center => '^',
+                Align::Right => '>',
+            };
+            f.write_char(c)?;
+        }
+        if let Some(sign) = self.sign {
+            let c = match sign {
+                Sign::Plus => '+',
+                Sign::Minus => '-',
+            };
+            f.write_char(c)?;
+        }
+        if self.alternate {
+            f.write_char('#')?;
+        }
+        if self.zero {
+            f.write_char('0')?;
+        }
+
+        match &self.width {
+            Some(Width::Constant(n)) => write!(f, "{}", n)?,
+            Some(Width::Position(n)) => write!(f, "{}$", n)?,
+            Some(Width::Name(s)) => write!(f, "{}$", s)?,
+            None => {}
+        }
+
+        match &self.precision {
+            Some(Precision::Constant(n)) => write!(f, ".{}", n)?,
+            Some(Precision::Position(n)) => write!(f, ".{}$", n)?,
+            Some(Precision::Name(s)) => write!(f, ".{}$", s)?,
+            Some(Precision::Bundled) => write!(f, ".*")?,
+            None => {}
+        }
+
+        if let Some(t) = self.ty {
+            f.write_char(t)?;
+        }
+
+        Ok(())
     }
 }
 
