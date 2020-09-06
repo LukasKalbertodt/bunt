@@ -119,6 +119,9 @@ fn arg_referal() {
         "a p c b a m" ==
         "{} {peter} {2} {} {0} {mary}", 'a', 'b', 'c', peter = 'p', mary = 'm'
     );
+
+    check!("3 5" == "{} {}", foo = 3, bar = 5);
+    check!("3 7 5 3 5 7" == "{} {baz} {} {0} {bar} {}", foo = 3, bar = 5, baz = 7);
 }
 
 #[test]

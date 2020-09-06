@@ -231,7 +231,7 @@ impl ArgRef {
         // Check kind of argument reference.
         let kind = if arg_str.is_empty() {
             ArgRefKind::Next
-        } else if let Ok(pos) = arg_str.parse::<u32>() {
+        } else if let Ok(pos) = arg_str.parse::<usize>() {
             ArgRefKind::Position(pos)
         } else {
             // TODO: make sure the string is a valid Rust identifier
@@ -387,8 +387,8 @@ impl FormatArgs {
             None
         }
 
-        let mut positional = Vec::new();
-        let mut named = HashMap::new();
+        let mut exprs = Vec::new();
+        let mut name_indices = HashMap::new();
         let mut saw_named = false;
 
         // The remaining tokens should all be `None` delimited groups each
@@ -406,7 +406,9 @@ impl FormatArgs {
                     tokens: it.collect(),
                     span,
                 };
-                named.insert(name, expr);
+                let index = exprs.len();
+                exprs.push(expr);
+                name_indices.insert(name, index);
             } else {
                 if saw_named {
                     let e = err!(span, "positional argument after named arguments is not allowed");
@@ -417,11 +419,11 @@ impl FormatArgs {
                     tokens: vec![tt0, tt1].into_iter().filter_map(|tt| tt).chain(it).collect(),
                     span,
                 };
-                positional.push(expr);
+                exprs.push(expr);
             }
 
         }
 
-        Ok(Self { positional, named })
+        Ok(Self { exprs, name_indices })
     }
 }

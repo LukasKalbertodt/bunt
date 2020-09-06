@@ -85,7 +85,7 @@ pub(crate) enum ArgRefKind {
     /// `{}`
     Next,
     /// `{2}`
-    Position(u32),
+    Position(usize),
     /// `{peter}`
     Name(String),
 }
@@ -93,8 +93,12 @@ pub(crate) enum ArgRefKind {
 /// Parsed formatting arguments.
 #[derive(Debug)]
 pub(crate) struct FormatArgs {
-    pub(crate) positional: Vec<Expr>,
-    pub(crate) named: HashMap<String, Expr>,
+    /// All argument expressions in order, including the named ones (without the
+    /// `name =` part).
+    pub(crate) exprs: Vec<Expr>,
+
+    /// Mapping from named argument name to index in `self.exprs`.
+    pub(crate) name_indices: HashMap<String, usize>,
 }
 
 #[derive(Debug, Clone, Copy)]

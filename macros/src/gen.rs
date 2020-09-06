@@ -14,12 +14,8 @@ use crate::{
 
 impl WriteInput {
     pub(crate) fn gen_output(&self) -> Result<TokenStream, Error> {
-        // Helper functions to create idents for argument bindings
-        fn pos_arg_ident(id: u32) -> Ident {
-            Ident::new(&format!("arg_pos_{}", id), Span::mixed_site())
-        }
-        fn name_arg_ident(id: &str) -> Ident {
-            Ident::new(&format!("arg_name_{}", id), Span::mixed_site())
+        fn arg_ident(id: usize) -> Ident {
+            Ident::new(&format!("arg{}", id), Span::mixed_site())
         }
 
         // Create a binding for each given argument. This is useful for two
@@ -32,14 +28,8 @@ impl WriteInput {
         //   bindings, we have to do lots of tricky logic to get the right
         //   arguments in each invidiual `write` call.
         let mut arg_bindings = TokenStream::new();
-        for (i, arg) in self.args.positional.iter().enumerate() {
-            let ident = pos_arg_ident(i as u32);
-            arg_bindings.extend(quote! {
-                let #ident = &#arg;
-            })
-        }
-        for (name, arg) in self.args.named.iter() {
-            let ident = name_arg_ident(name);
+        for (i, arg) in self.args.exprs.iter().enumerate() {
+            let ident = arg_ident(i);
             arg_bindings.extend(quote! {
                 let #ident = &#arg;
             })
@@ -65,20 +55,19 @@ impl WriteInput {
                     for (i, arg) in args.into_iter().enumerate() {
                         let ident = match &arg.kind {
                             ArgRefKind::Next => {
-                                let ident = pos_arg_ident(next_arg_index as u32);
-                                if self.args.positional.get(next_arg_index).is_none() {
+                                if self.args.exprs.get(next_arg_index).is_none() {
                                     return Err(
                                         err!("invalid '{{}}' argument reference \
                                             (too few actual arguments)")
                                     );
                                 }
 
+                                let ident = arg_ident(next_arg_index);
                                 next_arg_index += 1;
                                 ident
                             }
                             ArgRefKind::Position(pos) => {
-                                let ident = pos_arg_ident(*pos);
-                                if self.args.positional.get(*pos as usize).is_none() {
+                                if self.args.exprs.get(*pos as usize).is_none() {
                                     return Err(err!(
                                         "invalid reference to positional argument {} (there are \
                                             not that many arguments)",
@@ -86,15 +75,13 @@ impl WriteInput {
                                     ));
                                 }
 
-                                ident
+                                arg_ident(*pos)
                             }
                             ArgRefKind::Name(name) => {
-                                let ident = name_arg_ident(&name);
-                                if self.args.named.get(name).is_none() {
-                                    return Err(err!("there is no argument named `{}`", name));
-                                }
+                                let index = self.args.name_indices.get(name)
+                                    .ok_or(err!("there is no argument named `{}`", name))?;
 
-                                ident
+                                arg_ident(*index)
                             }
                         };
 
