@@ -126,6 +126,9 @@
 // the macros.
 pub extern crate termcolor;
 
+// To consistently refer to the macros crate.
+#[doc(hidden)]
+pub extern crate bunt_macros;
 
 /// Writes formatted data to a `termcolor::WriteColor` target.
 ///
@@ -147,7 +150,15 @@ pub extern crate termcolor;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macros::write;
+// pub use bunt_macros::write;
+#[macro_export]
+macro_rules! write {
+    ($target:expr, $format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::write!(
+            $target $format_str $( $arg )*
+        )
+    };
+}
 
 /// Writes formatted data with newline to a `termcolor::WriteColor` target.
 ///
@@ -162,8 +173,14 @@ pub use bunt_macros::write;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macros::writeln;
-
+#[macro_export]
+macro_rules! writeln {
+    ($target:expr, $format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::writeln!(
+            $target $format_str $( $arg )*
+        )
+    };
+}
 /// Writes formatted data to stdout (with `ColorChoice::Auto`).
 ///
 /// This is like `write`, but always writes to
@@ -176,7 +193,15 @@ pub use bunt_macros::writeln;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macros::print;
+#[macro_export]
+macro_rules! print {
+    ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::write!(
+            ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
+            $format_str $( $arg )*
+        ).expect("failed to write to stdout in `bunt::print`")
+    };
+}
 
 /// Writes formatted data with newline to stdout (with `ColorChoice::Auto`).
 ///
@@ -187,7 +212,16 @@ pub use bunt_macros::print;
 /// ```
 ///
 /// See crate-level docs for more information.
-pub use bunt_macros::println;
+#[macro_export]
+macro_rules! println {
+    ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::writeln!(
+            ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
+            $format_str $( $arg )*
+        ).expect("failed to write to stdout in `bunt::println`")
+    };
+}
+
 
 /// Parses the given style specification string and returns the corresponding
 /// `termcolor::ColorSpec` value.
