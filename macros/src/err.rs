@@ -20,7 +20,9 @@ impl Error {
     pub(crate) fn to_compile_error(&self) -> TokenStream {
         let msg = &self.msg;
         quote_spanned! {self.span=>
-            compile_error!(#msg);
+            {
+                compile_error!(#msg);
+            }
         }
     }
 }

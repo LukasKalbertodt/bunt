@@ -119,6 +119,39 @@ fn arg_referal() {
         "a p c b a m" ==
         "{} {peter} {2} {} {0} {mary}", 'a', 'b', 'c', peter = 'p', mary = 'm'
     );
+
+    check!("3 5" == "{} {}", foo = 3, bar = 5);
+    check!("3 7 5 3 5 7" == "{} {baz} {} {0} {bar} {}", foo = 3, bar = 5, baz = 7);
+}
+
+#[test]
+fn arg_referal_width() {
+    check!("10|foo       |true" == "{}|{:0$}|{}", 10, "foo", true);
+    check!("10|foo    |true" == "{}|{:3$}|{}", 10, "foo", true, 7);
+    check!("10|foo    |true" == "{}|{:wid$}|{}", 10, "foo", true, wid = 7);
+    check!("10|foo    |7" == "{}|{:wid$}|{wid}", 10, "foo", wid = 7);
+
+    check!("bar|    5|5" == "{}|{1:1$}|{}", "bar", 5);
+    check!("bar|anna |5" == "{}|{name:1$}|{}", "bar", 5, name = "anna");
+    check!("bar|        5|5" == "{}|{1:wid$}|{}", "bar", 5, wid = 9);
+    check!("bar|anna     |5" == "{}|{name:wid$}|{}", "bar", 5, wid = 9, name = "anna");
+}
+
+#[test]
+fn arg_referal_precision() {
+    check!("2|3.14|true" == "{}|{:.0$}|{}", 2, 3.1415926, true);
+    check!("2|3.142|true" == "{}|{:.3$}|{}", 2, 3.1415926, true, 3);
+    check!("2|3.142|true" == "{}|{:.prec$}|{}", 2, 3.1415926, true, prec = 3);
+    check!("2|3.142|3" == "{}|{:.prec$}|{prec}", 2, 3.1415926, prec = 3);
+
+    check!("bar|3.1|1" == "{}|{2:.1$}|{}", "bar", 1, 3.1415926);
+    check!("bar|3.1|1" == "{}|{pi:.1$}|{}", "bar", 1, pi = 3.1415926);
+    check!("bar|3.1|1" == "{}|{pi:.prec$}|{}", "bar", 1, pi = 3.1415926, prec = 1);
+    check!("bar|3.1|1" == "{}|{2:.prec$}|{}", "bar", 1, 3.1415926, prec = 1);
+
+    check!("foo|3.14|true" == "{}|{:.*}|{}", "foo", 2, 3.1415926, true);
+    check!("3.1415926|3.14|foo" == "{}|{0:.*}|{}", 3.1415926, 2, "foo");
+    check!("true|3.14|foo" == "{}|{pi:.*}|{}", true, 2, "foo", pi = 3.1415926);
 }
 
 #[test]

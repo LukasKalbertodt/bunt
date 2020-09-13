@@ -8,8 +8,10 @@ use proc_macro2::TokenStream;
 mod err;
 mod gen;
 mod ir;
-mod literal;
 mod parse;
+
+#[cfg(test)]
+mod tests;
 
 use crate::{
     err::Error,
