@@ -1,14 +1,13 @@
-Bunt
-====
+# Bunt: simple macro-based terminal colors and styles
 
 [<img alt="CI status of master" src="https://img.shields.io/github/workflow/status/LukasKalbertodt/bunt/CI/master?label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/bunt/actions?query=workflow%3ACI+branch%3Amaster)
 [<img alt="Crates.io Version" src="https://img.shields.io/crates/v/bunt?logo=rust&style=for-the-badge" height="23">](https://crates.io/crates/bunt)
-<img alt="Crates.io Downloads" src="https://img.shields.io/crates/d/bunt?color=%233498db&label=crates.io%20downloads&style=for-the-badge" height="23">
+[<img alt="docs.rs" src="https://img.shields.io/crates/v/bunt?color=blue&label=docs&style=for-the-badge" height="23">](https://docs.rs/bunt)
 
 
 `bunt` offers macros to easily print colored and formatted text to a terminal.
 It is just a convenience API on top of [`termcolor`](https://crates.io/crates/termcolor).
-`bunt` is implemented using procedural macros, but as it does not depend on `syn`, compilation is fairly quick (≈1.5s on my machine, including all dependencies).
+`bunt` is implemented using procedural macros, but it does not depend on `syn` and its compilation is fairly quick (≈1.5s on my machine, including all dependencies).
 
 *Minimum Supported Rust Version*: 1.46.0
 
