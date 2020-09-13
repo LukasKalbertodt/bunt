@@ -90,7 +90,7 @@ pub(crate) enum ArgRefKind {
     Name(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct FormatSpec {
     pub(crate) fill: Option<char>,
@@ -134,7 +134,7 @@ pub(crate) enum Sign {
     Minus,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Width {
     Constant(usize),
@@ -142,7 +142,7 @@ pub(crate) enum Width {
     Position(usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Precision {
     Constant(usize),

@@ -49,10 +49,86 @@ impl WriteInput {
                 // fmt string, the right arguments (and no additional ones!) and
                 // the correct argument references.
                 FormatStrFragment::Fmt { fmt_str_parts, args } => {
+                    // Two helper functions to get the correct identifier for an
+                    // argument.
+                    let ident_for_pos = |pos| -> Result<Ident, Error> {
+                        if self.args.exprs.get(pos).is_none() {
+                            return Err(err!(
+                                "invalid reference to positional argument {} (there are \
+                                    not that many arguments)",
+                                pos,
+                            ));
+                        }
+
+                        Ok(arg_ident(pos))
+                    };
+                    let ident_for_name = |name| -> Result<Ident, Error> {
+                        let index = self.args.name_indices.get(name)
+                            .ok_or(err!("there is no argument named `{}`", name))?;
+
+                        Ok(arg_ident(*index))
+                    };
+
                     let mut fmt_str = fmt_str_parts[0].clone();
                     let mut used_args = BTreeSet::new();
 
                     for (i, arg) in args.into_iter().enumerate() {
+                        // Check width and precision parameters. Those are the
+                        // only two things in the format spec that can refer to
+                        // arguments. If they do, we change them to always refer
+                        // to a named parameter hat is inserted into
+                        // `used_args`.
+                        //
+                        // We check those before the main argument because of
+                        // the `.*` precision modifier which, like `{}`, refers
+                        // to the next argument. BUT the `.*` comes first. So
+                        // `println!("{:.*}", 2, 3.1415926)` prints `3.14` and
+                        // swapping the arguments would result in an error.
+                        let mut format_spec = arg.format_spec.clone();
+
+                        match &arg.format_spec.width {
+                            None | Some(Width::Constant(_)) => {}
+                            Some(Width::Name(name)) => {
+                                let ident = ident_for_name(name)?;
+                                format_spec.width = Some(Width::Name(ident.to_string()));
+                                used_args.insert(ident);
+                            }
+                            Some(Width::Position(pos)) => {
+                                let ident = ident_for_pos(*pos)?;
+                                format_spec.width = Some(Width::Name(ident.to_string()));
+                                used_args.insert(ident);
+                            }
+                        }
+
+                        match &arg.format_spec.precision {
+                            None | Some(Precision::Constant(_)) => {}
+                            Some(Precision::Name(name)) => {
+                                let ident = ident_for_name(name)?;
+                                format_spec.precision = Some(Precision::Name(ident.to_string()));
+                                used_args.insert(ident);
+                            }
+                            Some(Precision::Position(pos)) => {
+                                let ident = ident_for_pos(*pos)?;
+                                format_spec.precision = Some(Precision::Name(ident.to_string()));
+                                used_args.insert(ident);
+                            }
+                            Some(Precision::Bundled) => {
+                                if self.args.exprs.get(next_arg_index).is_none() {
+                                    return Err(err!(
+                                        "invalid '.*' precision argument reference to \
+                                            argument {} (too few actual arguments)",
+                                        next_arg_index,
+                                    ));
+                                }
+
+                                let ident = arg_ident(next_arg_index);
+                                format_spec.precision = Some(Precision::Name(ident.to_string()));
+                                used_args.insert(ident);
+                                next_arg_index += 1;
+                            }
+                        }
+
+                        // Check the main argument.
                         let ident = match &arg.kind {
                             ArgRefKind::Next => {
                                 if self.args.exprs.get(next_arg_index).is_none() {
@@ -66,26 +142,13 @@ impl WriteInput {
                                 next_arg_index += 1;
                                 ident
                             }
-                            ArgRefKind::Position(pos) => {
-                                if self.args.exprs.get(*pos as usize).is_none() {
-                                    return Err(err!(
-                                        "invalid reference to positional argument {} (there are \
-                                            not that many arguments)",
-                                        pos,
-                                    ));
-                                }
-
-                                arg_ident(*pos)
-                            }
-                            ArgRefKind::Name(name) => {
-                                let index = self.args.name_indices.get(name)
-                                    .ok_or(err!("there is no argument named `{}`", name))?;
-
-                                arg_ident(*index)
-                            }
+                            ArgRefKind::Position(pos) => ident_for_pos(*pos)?,
+                            ArgRefKind::Name(name) => ident_for_name(name)?,
                         };
 
-                        std::write!(fmt_str, "{{{}:{}}}", ident, arg.format_spec).unwrap();
+                        // Create the full fmt argument and also push the next
+                        // string part.
+                        std::write!(fmt_str, "{{{}:{}}}", ident, format_spec).unwrap();
                         used_args.insert(ident);
                         fmt_str.push_str(&fmt_str_parts[i + 1]);
                     }
