@@ -66,6 +66,10 @@ fn format_spec_width() {
         width: Some(Width::Constant(5)),
         .. FormatSpec::default()
     });
+    check_format_spec("0$", FormatSpec {
+        width: Some(Width::Position(0)),
+        .. FormatSpec::default()
+    });
     check_format_spec("2$", FormatSpec {
         width: Some(Width::Position(2)),
         .. FormatSpec::default()

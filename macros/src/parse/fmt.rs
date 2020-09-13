@@ -274,7 +274,12 @@ impl FormatSpec {
         // Simple flags.
         let sign = it.next_if(Sign::from_char);
         let alternate = it.next_if_eq('#');
-        let zero = it.next_if_eq('0');
+        let zero = if it.peek == Some('0') && it.peek2 != Some('$') {
+            it.next().unwrap();
+            true
+        } else {
+            false
+        };
 
         // Width or early exit.
         let width = match it.peek {
