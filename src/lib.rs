@@ -58,10 +58,6 @@
 //! bunt::println!("value: {[green]foo:.5}", foo = 3.14);
 //! ```
 //!
-//! **Note**: Currently, it is not yet possible to refer to parameters for the
-//! "precision" or "width" value. So, `println!("Hello {1:0$}!", 5, "x");"` will
-//! fail to compile right now.
-//!
 //! ## Style specification
 //!
 //! `bunt` has the same capabilities as `termcolor`. See [`termcolor::Color`]
