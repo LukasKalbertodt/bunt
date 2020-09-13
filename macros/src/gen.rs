@@ -3,6 +3,7 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use std::{
+    cell::RefCell,
     collections::BTreeSet,
     fmt::{self, Write},
 };
@@ -42,6 +43,14 @@ impl WriteInput {
         let mut writes = TokenStream::new();
         let mut next_arg_index = 0;
 
+        // We want to keep track of all expressions that were used somehow to
+        // emit an error if there are unused ones. As the easiest way to update
+        // this is within `ident_for_pos` and `ident_for_name` and since two
+        // closures cannot borrow the vector mutably at the same time, we use a
+        // ref cell. It's totally fine here as the vector will only be borrowed
+        // very briefly.
+        let used_expressions = RefCell::new(vec![false; self.args.exprs.len()]);
+
         for segment in &self.format_str.fragments {
             match segment {
                 // A formatting fragment. This is the more tricky one. We have
@@ -60,12 +69,14 @@ impl WriteInput {
                             ));
                         }
 
+                        used_expressions.borrow_mut()[pos] = true;
                         Ok(arg_ident(pos))
                     };
                     let ident_for_name = |name| -> Result<Ident, Error> {
                         let index = self.args.name_indices.get(name)
                             .ok_or(err!("there is no argument named `{}`", name))?;
 
+                        used_expressions.borrow_mut()[*index] = true;
                         Ok(arg_ident(*index))
                     };
 
@@ -123,6 +134,8 @@ impl WriteInput {
 
                                 let ident = arg_ident(next_arg_index);
                                 format_spec.precision = Some(Precision::Name(ident.to_string()));
+
+                                used_expressions.borrow_mut()[next_arg_index] = true;
                                 used_args.insert(ident);
                                 next_arg_index += 1;
                             }
@@ -138,6 +151,7 @@ impl WriteInput {
                                     );
                                 }
 
+                                used_expressions.borrow_mut()[next_arg_index] = true;
                                 let ident = arg_ident(next_arg_index);
                                 next_arg_index += 1;
                                 ident
@@ -190,6 +204,11 @@ impl WriteInput {
         // Check if the style tags are balanced
         if !style_stack.is_empty() {
             return Err(err!("unclosed style tag"));
+        }
+
+        if let Some(unused_pos) = used_expressions.into_inner().iter().position(|used| !used) {
+            let expr = &self.args.exprs[unused_pos];
+            return Err(err!(expr.span, "argument never used: `{}`", expr.tokens));
         }
 
         // Combine everything.

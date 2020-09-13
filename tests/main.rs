@@ -132,9 +132,9 @@ fn arg_referal_width() {
     check!("10|foo    |7" == "{}|{:wid$}|{wid}", 10, "foo", wid = 7);
 
     check!("bar|    5|5" == "{}|{1:1$}|{}", "bar", 5);
-    check!("bar|anna |5" == "{}|{name:1$}|{}", "bar", 5, true, name = "anna");
+    check!("bar|anna |5" == "{}|{name:1$}|{}", "bar", 5, name = "anna");
     check!("bar|        5|5" == "{}|{1:wid$}|{}", "bar", 5, wid = 9);
-    check!("bar|anna     |5" == "{}|{name:wid$}|{}", "bar", 5, true, wid = 9, name = "anna");
+    check!("bar|anna     |5" == "{}|{name:wid$}|{}", "bar", 5, wid = 9, name = "anna");
 }
 
 #[test]
