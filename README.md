@@ -10,6 +10,8 @@ Bunt
 It is just a convenience API on top of [`termcolor`](https://crates.io/crates/termcolor).
 `bunt` is implemented using procedural macros, but as it does not depend on `syn`, compilation is fairly quick (≈1.5s on my machine, including all dependencies).
 
+*Minimum Supported Rust Version*: 1.46.0
+
 ```rust
 // Style tags will color/format text between the tags.
 bunt::println!("I really like {$yellow}lemons{/$}! Like, {$blue+italic}a lot{/$}.");
