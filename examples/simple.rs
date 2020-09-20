@@ -7,8 +7,8 @@ fn main() {
     println!();
 
     let ty = "u32";
-    bunt::println!("{$bold+red}error:{/$} invalid value for type `{[blue]}`", ty);
-    bunt::println!("");
-    bunt::println!("{$italic}Just {$yellow}kidding{/$}{/$}, there is no {$magenta}error{/$} :)");
+    bunt::eprintln!("{$bold+red}error:{/$} invalid value for type `{[blue]}`", ty);
+    bunt::eprintln!("");
+    bunt::eprintln!("{$italic}Just {$yellow}kidding{/$}{/$}, there is no {$magenta}error{/$} :)");
     println!();
 }

@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
-
+### Added
+- Add `eprint!` and `eprintln!`
 
 ## [0.2.0] - 2020-09-13
 ### Breaking changes

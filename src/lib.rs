@@ -107,13 +107,14 @@
 //!
 //! - [`write`] and [`writeln`]: print to a `termcolor::WriteColor` instance.
 //! - [`print`] and [`println`]: print to stdout.
+//! - [`eprint`] and [`eprintln`]: print to stderr.
 //! - [`style`]: parses a format specification and returns the corresponding
 //!   `termcolor::ColorSpec` value.
 //!
 //! In larger applications, you should probably use `write!` and `writeln!` to
-//! have more control over how the stdout handle is created.
-//!
-//!
+//! have more control over how the stdout/stderr handle is created. You usually
+//! want to give your users the choice of color usage, e.g. via a `--color` CLI
+//! argument.
 //!
 
 #![deny(intra_doc_link_resolution_failure)]
@@ -136,12 +137,13 @@ pub extern crate bunt_macros;
 /// ```
 /// use bunt::termcolor::{ColorChoice, StandardStream};
 ///
-/// // Printing to stderr, just to show something `print` can't do.
-/// let mut stderr = StandardStream::stderr(ColorChoice::Auto);
-/// let result = bunt::write!(stderr, "{$red}bad error!{/$}");
+/// // Choosing a different color choice, just to show something `println`
+/// // can't do.
+/// let mut stdout = StandardStream::stdout(ColorChoice::Always);
+/// let result = bunt::write!(stdout, "{$red}bad error!{/$}");
 ///
 /// if result.is_err() {
-///     // Writing to stderr failed...
+///     // Writing to stdout failed...
 /// }
 /// ```
 ///
@@ -163,9 +165,10 @@ macro_rules! write {
 /// ```
 /// use bunt::termcolor::{ColorChoice, StandardStream};
 ///
-/// // Printing to stderr, just to show something `println` can't do.
-/// let mut stderr = StandardStream::stderr(ColorChoice::Auto);
-/// let _ = bunt::writeln!(stderr, "{$red}bad error!{/$}");
+/// // Choosing a different color choice, just to show something `println`
+/// // can't do.
+/// let mut stdout = StandardStream::stdout(ColorChoice::Always);
+/// let _ = bunt::writeln!(stdout, "{$red}bad error!{/$}");
 /// ```
 ///
 /// See crate-level docs for more information.
@@ -177,6 +180,7 @@ macro_rules! writeln {
         )
     };
 }
+
 /// Writes formatted data to stdout (with `ColorChoice::Auto`).
 ///
 /// This is like `write`, but always writes to
@@ -218,6 +222,46 @@ macro_rules! println {
     };
 }
 
+/// Writes formatted data to stderr (with `ColorChoice::Auto`).
+///
+/// This is like `write`, but always writes to
+/// `StandardStream::stderr(termcolor::ColorChoice::Auto)`. `eprint` also does
+/// not return a result, but instead panics if an error occurs writing to
+/// stderr.
+///
+/// ```
+/// bunt::eprint!("{$magenta}foo {[bold]} bar{/$}", 27);
+/// ```
+///
+/// See crate-level docs for more information.
+#[macro_export]
+macro_rules! eprint {
+    ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::write!(
+            ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
+            $format_str $( $arg )*
+        ).expect("failed to write to stderr in `bunt::eprint`")
+    };
+}
+
+/// Writes formatted data with newline to stderr (with `ColorChoice::Auto`).
+///
+/// Like [`eprint!`], but adds a newline (`\n`) at the end.
+///
+/// ```
+/// bunt::eprintln!("{$cyan}foo {[bold]} bar{/$}", true);
+/// ```
+///
+/// See crate-level docs for more information.
+#[macro_export]
+macro_rules! eprintln {
+    ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::bunt_macros::writeln!(
+            ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
+            $format_str $( $arg )*
+        ).expect("failed to write to stderr in `bunt::eprintln`")
+    };
+}
 
 /// Parses the given style specification string and returns the corresponding
 /// `termcolor::ColorSpec` value.
