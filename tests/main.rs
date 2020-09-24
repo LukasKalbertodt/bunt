@@ -251,3 +251,15 @@ fn mixed_tag_args() {
         "a {$yellow}...{[intense]}...{$bold}b{[green]}c{/$}{/$}d", 27, true
     );
 }
+
+#[test]
+fn questionmark_in_argument() {
+    fn foo(s: &str) -> Result<bool, std::num::ParseIntError> {
+        let mut b = buf();
+        let _  = bunt::writeln!(b, "Hello {[green]}", s.parse::<u64>()?);
+        Ok(true)
+    }
+
+    assert!(foo("hi").is_err());
+    assert_eq!(foo("3"), Ok(true));
+}
