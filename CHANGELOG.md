@@ -5,23 +5,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 ### Fixed
-- Make `?` work inside arguments (e.g. `println!("{}", foo?)`)
+- Make `?` work inside arguments (e.g. `println!("{}", foo?)`) ([#16](https://github.com/LukasKalbertodt/bunt/pull/16))
 
 ## [0.2.1] - 2020-09-20
 ### Added
-- Add `eprint!` and `eprintln!`
+- Add `eprint!` and `eprintln!` ([#13](https://github.com/LukasKalbertodt/bunt/pull/13))
 
 ## [0.2.0] - 2020-09-13
 ### Breaking changes
 - Minimal Rust version bumped to 1.46.0
 
 ### Changed
-- `syn` dependency removed
+- `syn` dependency removed ([#8](https://github.com/LukasKalbertodt/bunt/pull/8))
 - Emit error if arguments are not used
 
 ### Fixed
 - Implement width and precision non-constant arguments (e.g. `{:0$}` or
-  `{:.prec$}` or `{:.*}`)
+  `{:.prec$}` or `{:.*}`) ([#10](https://github.com/LukasKalbertodt/bunt/pull/10))
 - Fix named arguments also working as positional ones
 - Fix bug in parsing 0 flag in format spec (`{:0$}` now parses as "the width is
   specified in the first argument" instead of the zero flag)
