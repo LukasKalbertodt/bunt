@@ -251,3 +251,57 @@ fn mixed_tag_args() {
         "a {$yellow}...{[intense]}...{$bold}b{[green]}c{/$}{/$}d", 27, true
     );
 }
+
+#[test]
+fn questionmark_in_argument() {
+    fn foo(s: &str) -> Result<bool, std::num::ParseIntError> {
+        let mut b = buf();
+        let _  = bunt::writeln!(b, "Hello {[green]}", s.parse::<u64>()?);
+        Ok(true)
+    }
+
+    assert!(foo("hi").is_err());
+    assert_eq!(foo("3"), Ok(true));
+}
+
+#[test]
+fn io_error() {
+    let mut empty = [];
+    let res = bunt::write!(&mut empty[..], "hello");
+    assert!(res.is_err());
+}
+
+#[test]
+fn set_color_error() {
+    use std::io;
+
+    struct Dummy;
+
+    impl io::Write for Dummy {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl bunt::termcolor::WriteColor for Dummy {
+        fn supports_color(&self) -> bool {
+            true
+        }
+        fn set_color(&mut self, _: &bunt::termcolor::ColorSpec) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::NotFound, "oops"))
+        }
+        fn reset(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let mut b = Dummy;
+    assert!(bunt::write!(b, "hello").is_ok());
+
+    let res = bunt::write!(b, "{$green}colooor{/$}");
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().kind(), io::ErrorKind::NotFound);
+}

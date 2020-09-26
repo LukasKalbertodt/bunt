@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
-
+### Fixed
+- Make `?` work inside arguments (e.g. `println!("{}", foo?)`)
 
 ## [0.2.1] - 2020-09-20
 ### Added

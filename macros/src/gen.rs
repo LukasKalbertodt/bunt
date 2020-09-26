@@ -170,7 +170,11 @@ impl WriteInput {
 
                     // Combine everything in `write!` invocation.
                     writes.extend(quote! {
-                        std::write!(#buf, #fmt_str #(, #used_args = #used_args)* )?;
+                        if let std::result::Result::Err(e)
+                            = std::write!(#buf, #fmt_str #(, #used_args = #used_args)* )
+                        {
+                            break std::result::Result::Err(e);
+                        }
                     });
                 }
 
@@ -183,7 +187,11 @@ impl WriteInput {
                     let style_def = new_style.to_tokens();
                     style_stack.push(new_style);
                     writes.extend(quote! {
-                        ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                        if let std::result::Result::Err(e)
+                            = ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)
+                        {
+                            break std::result::Result::Err(e);
+                        }
                     });
                 }
 
@@ -195,7 +203,11 @@ impl WriteInput {
                     let style = style_stack.last().copied().unwrap_or(Style::default());
                     let style_def = style.to_tokens();
                     writes.extend(quote! {
-                        ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)?;
+                        if let std::result::Result::Err(e)
+                            = ::bunt::termcolor::WriteColor::set_color(#buf, &#style_def)
+                        {
+                            break std::result::Result::Err(e);
+                        }
                     });
                 }
             }
@@ -214,15 +226,15 @@ impl WriteInput {
         // Combine everything.
         let target = &self.target;
         Ok(quote! {
-            (|| -> Result<(), ::std::io::Error> {
+            loop {
                 use std::io::Write as _;
 
                 #arg_bindings
                 let #buf = &mut #target;
                 #writes
 
-                Ok(())
-            })()
+                break Ok(());
+            }
         })
     }
 }
