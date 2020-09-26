@@ -1,6 +1,6 @@
 use std::fmt;
 use bunt::{
-    write, writeln, print, println,
+    write, writeln, print, println, eprint, eprintln,
     termcolor::Buffer,
 };
 
@@ -304,4 +304,30 @@ fn set_color_error() {
     let res = bunt::write!(b, "{$green}colooor{/$}");
     assert!(res.is_err());
     assert_eq!(res.unwrap_err().kind(), io::ErrorKind::NotFound);
+}
+
+#[test]
+fn concat_fmt_strings() {
+    check!("hello" == ["hello"]);
+    check!("hello" == ["hello",]);
+    check!("foobar" == ["foo", "bar"]);
+    check!("foobar" == ["foo", "bar",]);
+    check!("foo 27 bar" == ["foo ", "{} bar"], 27);
+    check!("abtruecd" == ["a", "b", "{}", "c", "d"], true);
+
+    check!(
+        "a\nb\tc\rd\0e\x48f\u{50}g\u{228}h\u{fffe}i\u{1F923}j" ==
+        ["a\n", "b\tc\r", "d\0e\x48f\u{50}", "g\u{228}h\u{fffe}i", "\u{1F923}j"]
+    );
+}
+
+#[test]
+fn concat_fmt_strings_all_strings() {
+    let mut b = buf();
+    let _ = write!(b, ["a", "{} b"], 27);
+    let _ = writeln!(b, ["a", "{} b"], 27);
+    print!(["a", "{} \r"], 27);
+    eprint!(["a", "{} \r"], 27);
+    println!(["", "{}"], "");
+    eprintln!(["", "{}"], "");
 }
