@@ -116,6 +116,29 @@
 //! want to give your users the choice of color usage, e.g. via a `--color` CLI
 //! argument.
 //!
+//!
+//! # Passing multiple format strings (`concat!` replacement)
+//!
+//! In many cases, users wish to call `concat!` and pass the result as format
+//! string to bunt's macros, e.g. `bunt::println!(concat!("foo", "bar"))`. This
+//! is mainly used if you want to write your own macro to wrap bunt's macros.
+//! Unfortunately, this is not easily possible as macros are expaned lazily. See
+//! [issue #15](https://github.com/LukasKalbertodt/bunt/issues/15) for more
+//! information.
+//!
+//! As a workaround for this fairly common use case, bunt allows passing an
+//! "array of format strings", like so:
+//!
+//! ```
+//! bunt::println!(["foo ", "{[red]} bar"], 27);
+//! ```
+//!
+//! All given strings will be concatenated by `bunt`. So the above code is
+//! equivalent to `bunt::println!("foo {[red]} bar", 27)`.
+//!
+//! For most users this feature is irrelevant. If possible, pass the format
+//! string as single string literal.
+//!
 
 #![deny(intra_doc_link_resolution_failure)]
 
@@ -152,8 +175,11 @@ pub extern crate bunt_macros;
 #[macro_export]
 macro_rules! write {
     ($target:expr, $format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::write!($target, [$format_str] $(, $arg )*)
+    };
+    ($target:expr, [$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::write!(
-            $target $format_str $( $arg )*
+            $target [$($format_str)+] $( $arg )*
         )
     };
 }
@@ -175,8 +201,11 @@ macro_rules! write {
 #[macro_export]
 macro_rules! writeln {
     ($target:expr, $format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::writeln!($target, [$format_str] $(, $arg )*)
+    };
+    ($target:expr, [$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::writeln!(
-            $target $format_str $( $arg )*
+            $target [$($format_str)+] $( $arg )*
         )
     };
 }
@@ -196,9 +225,12 @@ macro_rules! writeln {
 #[macro_export]
 macro_rules! print {
     ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::print!([$format_str] $(, $arg )*)
+    };
+    ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::write!(
             ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
-            $format_str $( $arg )*
+            [$($format_str)+] $( $arg )*
         ).expect("failed to write to stdout in `bunt::print`")
     };
 }
@@ -215,9 +247,12 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::println!([$format_str] $(, $arg )*)
+    };
+    ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::writeln!(
             ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
-            $format_str $( $arg )*
+            [$($format_str)+] $( $arg )*
         ).expect("failed to write to stdout in `bunt::println`")
     };
 }
@@ -237,9 +272,12 @@ macro_rules! println {
 #[macro_export]
 macro_rules! eprint {
     ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::eprint!([$format_str] $(, $arg )*)
+    };
+    ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::write!(
             ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
-            $format_str $( $arg )*
+            [$($format_str)+] $( $arg )*
         ).expect("failed to write to stderr in `bunt::eprint`")
     };
 }
@@ -256,9 +294,12 @@ macro_rules! eprint {
 #[macro_export]
 macro_rules! eprintln {
     ($format_str:literal $(, $arg:expr)* $(,)?) => {
+        $crate::eprintln!([$format_str] $(, $arg )*)
+    };
+    ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::writeln!(
             ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
-            $format_str $( $arg )*
+            [$($format_str)+] $( $arg )*
         ).expect("failed to write to stderr in `bunt::eprintln`")
     };
 }

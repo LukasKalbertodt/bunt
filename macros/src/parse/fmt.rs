@@ -1,6 +1,6 @@
 use proc_macro2::{
     Span,
-    token_stream::IntoIter as TokenIterator,
+    token_stream::IntoIter as TokenIterator, TokenTree, Delimiter,
 };
 use unicode_xid::UnicodeXID;
 use std::str::Chars;
@@ -15,6 +15,7 @@ use super::{parse, expect_helper_group, lit::expect_str_literal};
 
 
 impl FormatStr {
+    /// Parses `["foo"]`, `["foo" "bar"]`.
     pub(crate) fn parse(it: &mut TokenIterator) -> Result<Self, Error> {
         /// Searches for the next closing `}`. Returns a pair of strings, the
         /// first starting like `s` and ending at the closing brace, the second
@@ -29,8 +30,44 @@ impl FormatStr {
             Ok((&s[..end], &s[end + 1..]))
         }
 
-        let (inner, _) = expect_helper_group(it.next())?;
-        let (raw, span) = parse(inner, expect_str_literal)?;
+        // We expect a []-delimited group
+        let (inner, span) = match it.next() {
+            Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Bracket => {
+                (g.stream(), g.span())
+            }
+            Some(TokenTree::Group(g)) => {
+                return Err(err!(
+                    g.span(),
+                    "expected `[]` delimited group, but delimiter is {:?} (note: do not use \
+                        the macros from `bunt-macros` directly, but only through `bunt`)",
+                    g.delimiter(),
+                ));
+            }
+            Some(tt) => {
+                return Err(err!(
+                    tt.span(),
+                    "expected `[]` delimited group, but found different token tree (note: do \
+                        not use the macros from `bunt-macros` directly, but only through `bunt`)",
+                ))
+            }
+            None => return Err(err!("expected `[]` delimited group, found EOF")),
+        };
+
+        if inner.is_empty() {
+            return Err(err!(
+                span,
+                "at least one format string has to be provided, but `[]` was passed (note: do not \
+                    use the macros from `bunt-macros` directly, but only through `bunt`)"
+            ));
+        }
+
+        // Concat all string literals
+        let mut raw = String::new();
+        for tt in inner {
+            let (literal, _) = expect_helper_group(Some(tt))?;
+            let (string_data, _) = parse(literal, expect_str_literal)?;
+            raw += &string_data;
+        }
 
         // Scan the whole string
         let mut fragments = Vec::new();
