@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [0.2.3] - 2020-10-03
 ### Added
 - Add way to pass multiple format strings (`println!(["abc", "bar"])` to work around the `concat!` limitation ([#17](https://github.com/LukasKalbertodt/bunt/pull/17))
 
@@ -44,7 +46,8 @@ All notable changes to this project will be documented in this file.
 - Everything (`write`, `writeln`, `print`, `println`, `style`)
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.3...HEAD
+[0.2.1]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.2...v0.2.3
 [0.2.1]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/LukasKalbertodt/bunt/compare/v0.1.1...v0.2.0
