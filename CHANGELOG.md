@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+### Added
+- Add way to pass multiple format strings (`println!(["abc", "bar"])` to work around the `concat!` limitation ([#17](https://github.com/LukasKalbertodt/bunt/pull/17))
 
+### Changed
+- Clarify that `bunt-macros` is treated as internal code and that you must not depend on it directly. That crate does *not* follow semantic versioning.
 
 ## [0.2.2] - 2020-09-26
 ### Fixed
