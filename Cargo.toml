@@ -18,5 +18,5 @@ categories = ["command-line-interface"]
 exclude = [".github"]
 
 [dependencies]
-bunt-macros = { version = "0.2.2", path = "macros" }
+bunt-macros = { version = "=0.2.2", path = "macros" }
 termcolor = "1"

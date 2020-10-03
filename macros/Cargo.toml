@@ -4,7 +4,11 @@ version = "0.2.2"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2018"
 
-description = "Helper crate for `bunt`. Please see that crate's docs for more information."
+description = """
+Helper crate for `bunt`. Please see the docs of `bunt` for more information. Do
+not use this crate directly, API stability is not guaranteed!
+"""
+repository = "https://github.com/LukasKalbertodt/bunt/"
 license = "MIT/Apache-2.0"
 
 [lib]
