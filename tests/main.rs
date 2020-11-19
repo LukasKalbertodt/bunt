@@ -197,6 +197,14 @@ fn simple_tags() {
 }
 
 #[test]
+fn attributes() {
+    check!("a\x1b[0m\x1b[1mb\x1b[0mc" == "a{$bold}b{/$}c");
+    check!("a\x1b[0m\x1b[2mb\x1b[0mc" == "a{$dimmed}b{/$}c");
+    check!("a\x1b[0m\x1b[3mb\x1b[0mc" == "a{$italic}b{/$}c");
+    check!("a\x1b[0m\x1b[4mb\x1b[0mc" == "a{$underline}b{/$}c");
+}
+
+#[test]
 fn nested_tags() {
     check!(
         "a\x1b[0m\x1b[31mb\x1b[0m\x1b[1m\x1b[31mc\x1b[0m\x1b[31md\x1b[0me" ==
