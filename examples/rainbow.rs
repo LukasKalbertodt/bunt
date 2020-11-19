@@ -71,6 +71,13 @@ fn main() {
         dummy,
         sep,
     );
+    bunt::println!(
+        "default  \
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}",
+        dummy,
+        sep,
+    );
 
 
     // ===== Foreground vs. style ===============================================================
@@ -128,6 +135,11 @@ fn main() {
         "white    {$white}\
             {[bg:black]0}{[bg:blue]0}{[bg:green]0}{[bg:red]0}{[bg:cyan]0}{[bg:magenta]0}{[bg:yellow]0}{[bg:white]0}\
             {/$}",
+        dummy,
+    );
+    bunt::println!(
+        "default  \
+            {[bg:black]0}{[bg:blue]0}{[bg:green]0}{[bg:red]0}{[bg:cyan]0}{[bg:magenta]0}{[bg:yellow]0}{[bg:white]0}",
         dummy,
     );
 
