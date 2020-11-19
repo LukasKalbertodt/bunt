@@ -185,6 +185,7 @@ pub(crate) struct Style {
     pub(crate) intense: Option<bool>,
     pub(crate) underline: Option<bool>,
     pub(crate) italic: Option<bool>,
+    pub(crate) dimmed: Option<bool>,
     pub(crate) reset: Option<bool>,
 }
 
@@ -199,6 +200,7 @@ impl Style {
             intense: self.intense.or(style_b.intense),
             underline: self.underline.or(style_b.underline),
             italic: self.italic.or(style_b.italic),
+            dimmed: self.dimmed.or(style_b.dimmed),
             reset: self.reset.or(style_b.reset),
         }
     }

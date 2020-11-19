@@ -6,60 +6,75 @@ fn main() {
     bunt::println!("{$bold+blue+intense}Foreground colors and styles:{/$}");
     println!();
 
-    println!("         normal     bold       italic     underline  intense    bold+intense");
+    println!("         normal     bold       dimmed     italic     underline  intense    bold+intense");
     bunt::println!(
         "black    {$black}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "blue     {$blue}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "green    {$green}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "red      {$red}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "cyan     {$cyan}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "magenta  {$magenta}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "yellow   {$yellow}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
         dummy,
         sep,
     );
     bunt::println!(
         "white    {$white}\
-            {0}{1}{[bold]0}{1}{[italic]0}{1}{[underline]0}{1}{[intense]0}{1}{[bold+intense]0}\
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}\
             {/$}",
+        dummy,
+        sep,
+    );
+    bunt::println!(
+        "default  \
+            {0}{1}{[bold]0}{1}{[dimmed]0}{1}{[italic]0}{1}{[underline]0}\
+            {1}{[intense]0}{1}{[bold+intense]0}",
         dummy,
         sep,
     );
@@ -120,6 +135,11 @@ fn main() {
         "white    {$white}\
             {[bg:black]0}{[bg:blue]0}{[bg:green]0}{[bg:red]0}{[bg:cyan]0}{[bg:magenta]0}{[bg:yellow]0}{[bg:white]0}\
             {/$}",
+        dummy,
+    );
+    bunt::println!(
+        "default  \
+            {[bg:black]0}{[bg:blue]0}{[bg:green]0}{[bg:red]0}{[bg:cyan]0}{[bg:magenta]0}{[bg:yellow]0}{[bg:white]0}",
         dummy,
     );
 
