@@ -82,6 +82,7 @@
 //!   or `bg:#c0392b`
 //! - Attributes:
 //!   - `bold`
+//!   - `dimmed`
 //!   - `italic`
 //!   - `underline`
 //!   - `intense`
@@ -317,6 +318,7 @@ macro_rules! eprintln {
 /// assert_eq!(style.fg(), Some(&Color::Red));
 /// assert_eq!(style.bg(), Some(&Color::Yellow));
 /// assert!(style.bold());
+/// assert!(!style.dimmed());
 /// assert!(!style.italic());
 /// assert!(!style.underline());
 /// assert!(!style.intense());

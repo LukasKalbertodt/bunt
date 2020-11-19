@@ -19,4 +19,4 @@ exclude = [".github"]
 
 [dependencies]
 bunt-macros = { version = "=0.2.3", path = "macros" }
-termcolor = "1"
+termcolor = "1.1.1"

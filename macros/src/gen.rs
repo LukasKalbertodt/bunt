@@ -326,6 +326,7 @@ impl Style {
         }
 
         attr!(bold, set_bold);
+        attr!(dimmed, set_dimmed);
         attr!(italic, set_italic);
         attr!(underline, set_underline);
         attr!(intense, set_intense);

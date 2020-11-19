@@ -124,6 +124,8 @@ impl Style {
                 (false, None, "!bold") => set_attr!(bold, false),
                 (false, None, "italic") => set_attr!(italic, true),
                 (false, None, "!italic") => set_attr!(italic, false),
+                (false, None, "dimmed") => set_attr!(dimmed, true),
+                (false, None, "!dimmed") => set_attr!(dimmed, false),
                 (false, None, "underline") => set_attr!(underline, true),
                 (false, None, "!underline") => set_attr!(underline, false),
                 (false, None, "intense") => set_attr!(intense, true),
