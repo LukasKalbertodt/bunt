@@ -1,6 +1,6 @@
 [package]
 name = "bunt-macros"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2018"
 
