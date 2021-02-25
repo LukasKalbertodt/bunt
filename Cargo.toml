@@ -1,22 +1,8 @@
 [package]
 name = "bunt"
-version = "0.2.4"
-authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
+version = "0.1.0"
+authors = ["me"]
 edition = "2018"
 
-description = """
-Simple macros to write colored and formatted text to a terminal.
-Based on `termcolor`, thus also cross-platform.
-"""
-documentation = "https://docs.rs/bunt/"
-repository = "https://github.com/LukasKalbertodt/bunt/"
-readme = "README.md"
-license = "MIT/Apache-2.0"
-
-keywords = ["color", "term", "terminal", "format", "style"]
-categories = ["command-line-interface"]
-exclude = [".github"]
-
 [dependencies]
-bunt-macros = { version = "=0.2.4", path = "macros" }
-termcolor = "1.1.1"
+bunt-macros = { path = "macros" }
