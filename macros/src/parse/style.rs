@@ -3,10 +3,7 @@ use crate::{
     err::Error,
     ir::{Style, Color},
 };
-use super::{
-    parse,
-    lit::expect_str_literal,
-};
+use super::{parse, expect_str_literal};
 
 
 impl Style {

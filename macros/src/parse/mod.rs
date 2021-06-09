@@ -4,14 +4,13 @@ use proc_macro2::{
     Span, TokenStream, Delimiter, TokenTree, Spacing,
     token_stream::IntoIter as TokenIterator,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryFrom};
 use crate::{
     err::Error,
     ir::{Expr, WriteInput, FormatStr, FormatArgs},
 };
 
 mod fmt;
-mod lit;
 mod style;
 
 
@@ -61,6 +60,15 @@ fn expect_helper_group(tt: Option<TokenTree>) -> Result<(TokenStream, Span), Err
         }
         None => Err(err!("expected none or () delimited group, found EOF")),
     }
+}
+
+/// Tries to parse a string literal.
+pub(super) fn expect_str_literal(it: &mut TokenIterator) -> Result<(String, Span), Error> {
+    let tt = it.next().ok_or(err!("expected string literal, found EOF"))?;
+    let lit = litrs::StringLit::try_from(&tt)
+        .map_err(|e| err!(tt.span(), "{}", e))?;
+
+    Ok((lit.into_value().into_owned(), tt.span()))
 }
 
 impl WriteInput {

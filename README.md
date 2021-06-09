@@ -7,7 +7,7 @@
 
 `bunt` offers macros to easily print colored and formatted text to a terminal.
 It is just a convenience API on top of [`termcolor`](https://crates.io/crates/termcolor).
-`bunt` is implemented using procedural macros, but it does not depend on `syn` and its compilation is fairly quick (≈1.5s on my machine, including all dependencies).
+`bunt` is implemented using procedural macros, but it does not depend on `syn` and compiles fairly quickly.
 
 *Minimum Supported Rust Version*: 1.46.0
 

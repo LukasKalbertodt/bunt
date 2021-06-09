@@ -11,7 +11,7 @@ use crate::{
         FormatStrFragment, FormatSpec, Align, Sign, Width, Precision,
     },
 };
-use super::{parse, expect_helper_group, lit::expect_str_literal};
+use super::{parse, expect_helper_group, expect_str_literal};
 
 
 impl FormatStr {

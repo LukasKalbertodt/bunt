@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+### Changed
+- Use crate `litrs` for string literal parsing instead of having custom code for that.
+  This should get rid of some parsing errors for some edge cases.
+  It also makes maintenance easier, as it removes quite a bit of code from `bunt`.
 
 ## [0.2.4] - 2020-11-19
 ### Added
