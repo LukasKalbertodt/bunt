@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 
 ## [Unreleased]
+
+## [0.2.5] - 2021-06-09
 ### Changed
 - Use crate `litrs` for string literal parsing instead of having custom code for that.
   This should get rid of some parsing errors for some edge cases.
@@ -54,7 +56,8 @@ All notable changes to this project will be documented in this file.
 - Everything (`write`, `writeln`, `print`, `println`, `style`)
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.1...v0.2.2

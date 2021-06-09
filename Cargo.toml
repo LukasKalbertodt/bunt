@@ -1,6 +1,6 @@
 [package]
 name = "bunt"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2018"
 
@@ -18,5 +18,5 @@ categories = ["command-line-interface"]
 exclude = [".github"]
 
 [dependencies]
-bunt-macros = { version = "=0.2.4", path = "macros" }
+bunt-macros = { version = "=0.2.5", path = "macros" }
 termcolor = "1.1.1"
