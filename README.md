@@ -22,7 +22,7 @@ bunt::println!("Here is some data: {[green]:?}. {$bold}Length: {[cyan]}{/$}", v,
 ```
 
 <p align="center">
-    <img src=".github/readme-image.png" width=75%"></img>
+    <img src=".github/readme-image.png" width="75%"></img>
 </p>
 
 See [**the documentation**](https://docs.rs/bunt) for more information.
