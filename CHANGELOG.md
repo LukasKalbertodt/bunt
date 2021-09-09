@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.6] - 2021-09-09
+### Added
+- `println`, `eprintln` and `writeln` can now be used without format string and arguments to only emit a single newline.
+
 ## [0.2.5] - 2021-06-09
 ### Changed
 - Use crate `litrs` for string literal parsing instead of having custom code for that.
@@ -56,7 +60,8 @@ All notable changes to this project will be documented in this file.
 - Everything (`write`, `writeln`, `print`, `println`, `style`)
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.2...v0.2.3
