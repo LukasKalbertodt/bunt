@@ -111,6 +111,19 @@ fn no_move_args() {
 }
 
 #[test]
+fn empty_ln() {
+    // Just make sure they compile, we cannot easily capture and test their output.
+    println!();
+    eprintln!();
+
+
+    let mut b = buf();
+    writeln!(b).unwrap();
+    writeln!(b,).unwrap();
+    assert_eq!(raw_str(&b), "\n\n");
+}
+
+#[test]
 fn arg_referal() {
     check!("27" == "{peter}", peter = 27);
     check!("27 27" == "{0} {0}", 27);

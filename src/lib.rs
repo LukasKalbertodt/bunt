@@ -209,6 +209,9 @@ macro_rules! writeln {
             $target [$($format_str)+] $( $arg )*
         )
     };
+    ($target:expr $(,)?) => {
+        $crate::writeln!($target, "")
+    };
 }
 
 /// Writes formatted data to stdout (with `ColorChoice::Auto`).
@@ -256,6 +259,9 @@ macro_rules! println {
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stdout in `bunt::println`")
     };
+    () => {
+        std::println!()
+    };
 }
 
 /// Writes formatted data to stderr (with `ColorChoice::Auto`).
@@ -302,6 +308,9 @@ macro_rules! eprintln {
             ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stderr in `bunt::eprintln`")
+    };
+    () => {
+        std::eprintln!()
     };
 }
 
