@@ -14,21 +14,9 @@ jobs:
     name: 'Build & test'
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
-    - name: Prepare cache key
-      run: |
-        cargo generate-lockfile
-        cp Cargo.lock cache-fingerprint
-        echo $RUSTFLAGS >> cache-fingerprint
-        echo $(rustc -V) >> cache-fingerprint
-    - name: Restore cargo cache
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('cache-fingerprint') }}
+    - uses: actions/checkout@v3
+    - name: Restore backend cache
+      uses: Swatinem/rust-cache@v2
     - name: Build
       run: cargo build
     - name: Run tests
