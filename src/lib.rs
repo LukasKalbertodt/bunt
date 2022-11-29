@@ -112,10 +112,19 @@
 //! - [`style`]: parses a format specification and returns the corresponding
 //!   `termcolor::ColorSpec` value.
 //!
-//! In larger applications, you should probably use `write!` and `writeln!` to
-//! have more control over how the stdout/stderr handle is created. You usually
-//! want to give your users the choice of color usage, e.g. via a `--color` CLI
-//! argument.
+//! # Color Choice
+//!
+//! In real applications, you usually want to give your users the choice of
+//! color usage, e.g. via a `--color` CLI argument. If it's sufficient for you
+//! to configure this globally, see [`set_stdout_color_choice`] and
+//! [`set_stderr_color_choice`]. If not, you have to use `write[ln]` and pass
+//! the stream explicitly. By default, `ColorChoice::Auto` is used.
+//!
+//! `termcolor` already handles the env var `NO_COLOR=1` when the color choice
+//! is `Auto`. But it does not automatically detect the presence of a terminal.
+//! You likely want that! See [here][1] for more details.
+//!
+//! [1]: https://docs.rs/termcolor/latest/termcolor/index.html#detecting-presence-of-a-terminal
 //!
 //!
 //! # Passing multiple format strings (`concat!` replacement)
@@ -150,6 +159,11 @@ pub extern crate termcolor;
 // To consistently refer to the macros crate.
 #[doc(hidden)]
 pub extern crate bunt_macros;
+
+
+use std::sync::atomic::{AtomicU8, Ordering};
+use termcolor::ColorChoice;
+
 
 /// Writes formatted data to a `termcolor::WriteColor` target.
 ///
@@ -233,7 +247,7 @@ macro_rules! print {
     };
     ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::write!(
-            ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
+            ($crate::termcolor::StandardStream::stdout($crate::stdout_color_choice()))
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stdout in `bunt::print`")
     };
@@ -255,7 +269,7 @@ macro_rules! println {
     };
     ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::writeln!(
-            ($crate::termcolor::StandardStream::stdout($crate::termcolor::ColorChoice::Auto))
+            ($crate::termcolor::StandardStream::stdout($crate::stdout_color_choice()))
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stdout in `bunt::println`")
     };
@@ -283,7 +297,7 @@ macro_rules! eprint {
     };
     ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::write!(
-            ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
+            ($crate::termcolor::StandardStream::stderr($crate::stderr_color_choice()))
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stderr in `bunt::eprint`")
     };
@@ -305,7 +319,7 @@ macro_rules! eprintln {
     };
     ([$($format_str:literal),+ $(,)?] $(, $arg:expr)* $(,)?) => {
         $crate::bunt_macros::writeln!(
-            ($crate::termcolor::StandardStream::stderr($crate::termcolor::ColorChoice::Auto))
+            ($crate::termcolor::StandardStream::stderr($crate::stderr_color_choice()))
             [$($format_str)+] $( $arg )*
         ).expect("failed to write to stderr in `bunt::eprintln`")
     };
@@ -336,3 +350,60 @@ macro_rules! eprintln {
 ///
 /// See crate-level docs for more information.
 pub use bunt_macros::style;
+
+
+static STDOUT_COLOR_CHOICE: AtomicU8 = AtomicU8::new(color_choice_to_u8(ColorChoice::Auto));
+static STDERR_COLOR_CHOICE: AtomicU8 = AtomicU8::new(color_choice_to_u8(ColorChoice::Auto));
+
+const fn color_choice_to_u8(c: ColorChoice) -> u8 {
+    match c {
+        ColorChoice::Always => 0,
+        ColorChoice::AlwaysAnsi => 1,
+        ColorChoice::Auto => 2,
+        ColorChoice::Never => 3,
+    }
+}
+
+fn u8_to_color_choice(v: u8) -> ColorChoice {
+    match v {
+        0 => ColorChoice::Always,
+        1 => ColorChoice::AlwaysAnsi,
+        2 => ColorChoice::Auto,
+        3 => ColorChoice::Never,
+        _ => unreachable!("invalid global color choice"),
+    }
+}
+
+/// Returns the current global `ColorChoice` used by `print[ln]`.
+///
+/// This is `ColorChoice::Auto` by default and can be changed with
+/// [`set_stdout_color_choice`]. If you need more control than a global
+/// setting, use `write[ln]` instead of `print[ln]` and pass the stream
+/// explicitly.
+pub fn stdout_color_choice() -> ColorChoice {
+    u8_to_color_choice(STDOUT_COLOR_CHOICE.load(Ordering::SeqCst))
+}
+
+/// Sets the global `ColorChoice` used by `print[ln]`.
+///
+/// See [`stdout_color_choice`] for more information.
+pub fn set_stdout_color_choice(c: ColorChoice) {
+    STDOUT_COLOR_CHOICE.store(color_choice_to_u8(c), Ordering::SeqCst);
+}
+
+/// Returns the current global `ColorChoice` used by `eprint[ln]`.
+///
+/// This is `ColorChoice::Auto` by default and can be changed with
+/// [`set_stderr_color_choice`]. If you need more control than a global
+/// setting, use `write[ln]` instead of `eprint[ln]` and pass the stream
+/// explicitly.
+pub fn stderr_color_choice() -> ColorChoice {
+    u8_to_color_choice(STDERR_COLOR_CHOICE.load(Ordering::SeqCst))
+}
+
+/// Sets the global `ColorChoice` used by `eprint[ln]`.
+///
+/// See [`stderr_color_choice`] for more information.
+pub fn set_stderr_color_choice(c: ColorChoice) {
+    STDERR_COLOR_CHOICE.store(color_choice_to_u8(c), Ordering::SeqCst);
+}
