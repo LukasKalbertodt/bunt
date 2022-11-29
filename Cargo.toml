@@ -1,6 +1,6 @@
 [package]
 name = "bunt"
-version = "0.2.6"
+version = "0.2.7"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2018"
 
