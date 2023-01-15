@@ -1,6 +1,6 @@
 # Bunt: simple macro-based terminal colors and styles
 
-[<img alt="CI status of master" src="https://img.shields.io/github/workflow/status/LukasKalbertodt/bunt/CI/master?label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/bunt/actions?query=workflow%3ACI+branch%3Amaster)
+[<img alt="CI status of master" src="https://img.shields.io/github/actions/workflow/status/LukasKalbertodt/bunt/ci.yml?branch=master&label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/bunt/actions/workflows/ci.yml)
 [<img alt="Crates.io Version" src="https://img.shields.io/crates/v/bunt?logo=rust&style=for-the-badge" height="23">](https://crates.io/crates/bunt)
 [<img alt="docs.rs" src="https://img.shields.io/crates/v/bunt?color=blue&label=docs&style=for-the-badge" height="23">](https://docs.rs/bunt)
 
