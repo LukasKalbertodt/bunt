@@ -10,6 +10,13 @@ env:
   RUSTFLAGS: --deny warnings
 
 jobs:
+  style:
+    name: Check basic style
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: LukasKalbertodt/check-basic-style@v0.1
+
   check:
     name: 'Build & test'
     runs-on: ubuntu-20.04
