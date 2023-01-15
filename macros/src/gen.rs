@@ -9,7 +9,10 @@ use std::{
 };
 use crate::{
     err::Error,
-    ir::{WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr, FormatSpec, Align, Sign, Width, Precision},
+    ir::{
+        WriteInput, FormatStrFragment, ArgRefKind, Style, Color, Expr,
+        FormatSpec, Align, Sign, Width, Precision,
+    },
 };
 
 
