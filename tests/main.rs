@@ -352,3 +352,10 @@ fn concat_fmt_strings_all_strings() {
     println!(["", "{}"], "");
     eprintln!(["", "{}"], "");
 }
+
+#[test]
+fn ansi_colors() {
+    check!("a\x1b[0m\x1b[38;5;197mb\x1b[0mc" == "a{$@197}b{/$}c");
+    check!("a\x1b[0m\x1b[38;5;8mb\x1b[0mc" == "a{$@8}b{/$}c");
+    check!("a\x1b[0m\x1b[38;5;8mb\x1b[0mc" == "a{$@08}b{/$}c");
+}

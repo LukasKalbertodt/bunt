@@ -75,9 +75,7 @@
 //! - Colors:
 //!   - `black`, `blue`, `green`, `red`, `cyan`, `magenta`, `yellow`, `white`
 //!   - RGB as hex string: `#rrggbb`, e.g. `#27ae60`
-//!   - (yes, there is currently no syntax for `Color::Ansi256` because I
-//!     couldn't come up with a nice syntax and I never used these ansi
-//!     colors...)
+//!   - 8bit ANSI color codes: with `@` and a number between 0 and 255, e.g. `@197`
 //! - Background colors: same as colors but prefixed with `bg:`, e.g. `bg:blue`
 //!   or `bg:#c0392b`
 //! - Attributes:

@@ -39,6 +39,18 @@ impl Style {
                 "yellow" => Some(Color::Yellow),
                 "white" => Some(Color::White),
 
+                fragment if fragment.starts_with('@') => {
+                    let ansi = &fragment[1..];
+                    let ansi = ansi.parse::<u8>().map_err(|e| err!(
+                        span,
+                        "expected number between 0 and 255 for ANSI color code, found {} ({})",
+                        ansi,
+                        e,
+                    ))?;
+
+                    Some(Color::Ansi256(ansi))
+                },
+
                 hex if hex.starts_with('#') => {
                     let hex = &hex[1..];
 

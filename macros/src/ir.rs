@@ -173,7 +173,7 @@ pub(crate) enum Color {
     Magenta,
     Yellow,
     White,
-    //Ansi256(u8), // TODO: add
+    Ansi256(u8),
     Rgb(u8, u8, u8),
 }
 

@@ -356,6 +356,7 @@ impl Color {
             Self::Magenta => Some(quote! { Magenta }),
             Self::Yellow => Some(quote! { Yellow }),
             Self::White => Some(quote! { White }),
+            Self::Ansi256(ansi) => Some(quote!{ Ansi256(#ansi) }),
             Self::Rgb(r, g, b) => Some(quote! { Rgb(#r, #g, #b) }),
         };
 
