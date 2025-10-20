@@ -68,7 +68,7 @@ pub(super) fn expect_str_literal(it: &mut TokenIterator) -> Result<(String, Span
     let lit = litrs::StringLit::try_from(&tt)
         .map_err(|e| err!(tt.span(), "{}", e))?;
 
-    Ok((lit.into_value().into_owned(), tt.span()))
+    Ok((lit.into_value(), tt.span()))
 }
 
 impl WriteInput {
