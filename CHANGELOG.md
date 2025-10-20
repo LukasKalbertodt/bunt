@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.9] - 2025-10-20
+- Update `litrs` dependency to 1.0
+
 ## [0.2.8] - 2023-01-29
 ### Added
 - Add support for 8bit ANSI color codes via `@` prefix, e.g. `@197`.
@@ -68,7 +71,8 @@ All notable changes to this project will be documented in this file.
 - Everything (`write`, `writeln`, `print`, `println`, `style`)
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.8...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.9...HEAD
+[0.2.9]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/LukasKalbertodt/bunt/compare/v0.2.5...v0.2.6
